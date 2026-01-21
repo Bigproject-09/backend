@@ -1,4 +1,5 @@
-package com.example.agent_rnd.controller;
+package com.example.agent_rnd.controller.api.users;
+
 
 import com.example.agent_rnd.domain.user.User;
 import com.example.agent_rnd.service.UserService;
@@ -22,4 +23,15 @@ public class UserController {
     public User getUser(@PathVariable Long id) {
         return userService.getUser(id);
     }
+
+    // 3. 계정 삭제(계정만)
+    // 사용법: DELETE http://localhost:8080/api/users/1
+    @DeleteMapping("/{id}")
+    public void deleteUser(@PathVariable Long id) {
+        userService.deleteUser(id);
+    }
+
+    // 4. 계정 삭제(회사 포함)
+    // 사용법: DELETE http://localhost:8080/api/admin/companies/1
+
 }

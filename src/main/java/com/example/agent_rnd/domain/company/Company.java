@@ -8,10 +8,10 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @NoArgsConstructor
-@Table(name = "COMPANIES")
+@Table(name = "companies")
 public class Company {
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
     @Column(name = "company_id")
     private Long id;
 
@@ -32,4 +32,16 @@ public class Company {
     // [수정] DB 컬럼명인 end_date와 매핑
     @Column(name = "end_date")
     private LocalDateTime endDate;
+
+    public Company(Long id, String name, String businessRegNo,
+                   ContractStatus contractStatus,
+                   LocalDateTime startDate, LocalDateTime endDate) {
+        this.id = id;
+        this.name = name;
+        this.businessRegNo = businessRegNo;
+        this.contractStatus = contractStatus;
+        this.startDate = startDate;
+        this.endDate = endDate;
+    }
+
 }

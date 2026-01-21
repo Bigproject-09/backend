@@ -45,4 +45,17 @@ public class User {
 
     @Column(name = "is_free_used", nullable = false)
     private Boolean isFreeUsed;
+
+    public User(Long id, Company company, Plan plan, String email, String password,
+                UserRole role, UserStatus status, LocalDateTime createdAt, Boolean isFreeUsed) {
+        this.id = id;
+        this.company = company;
+        this.plan = plan;
+        this.email = email;
+        this.password = password;
+        this.role = role;
+        this.status = status;
+        this.createdAt = createdAt;
+        this.isFreeUsed = isFreeUsed;
+    }
 }

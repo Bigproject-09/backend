@@ -18,23 +18,21 @@ public class LoginController {
     @PostMapping("/login")
     public LoginResponse login(@RequestBody LoginRequest request) {
 
-        // 1️⃣ 로그인 검증
         User user = userService.login(request);
 
-        // 2️⃣ JWT 생성
+        // 1. getId() -> getUserId() 수정
         String token = JwtProvider.createToken(
-                user.getId(),
+                user.getUserId(),
                 user.getEmail(),
                 user.getRole().name()
         );
 
-        // 3️⃣ 응답
+        // 2. getId() -> getUserId() 수정
         return new LoginResponse(
-                user.getId(),
+                user.getUserId(),
                 user.getEmail(),
                 user.getRole().name(),
                 token
         );
     }
 }
-

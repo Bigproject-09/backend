@@ -1,61 +1,92 @@
 package com.example.agent_rnd.domain.user;
 
-import com.example.agent_rnd.domain.company.Company;
-import com.example.agent_rnd.domain.plan.Plan;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.Collections;
 
 @Entity
+@Table(name = "USERS")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "USERS")
-public class User {
+@AllArgsConstructor
+@Builder
+public class User implements UserDetails {
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
-    private Long id;
+    private Long userId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "company_id", nullable = false)
-    private Company company;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "plan_id", nullable = false)
-    private Plan plan;
-
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String email;
 
     @Column(nullable = false)
     private String password;
 
     @Enumerated(EnumType.STRING)
-    @Column(length = 20)
+    @Column(nullable = false)
     private UserRole role;
 
     @Enumerated(EnumType.STRING)
-    @Column(length = 20)
+    @Column(nullable = false)
     private UserStatus status;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    // [필수 수정] UserService에서 ID를 넣고 있으므로 여기도 Long이어야 함
+    @Column(name = "company_id", nullable = false)
+    private Long companyId;
+
+    // [필수 수정] UserService에서 ID를 넣고 있으므로 여기도 Long이어야 함
+    @Column(name = "plan_id", nullable = false)
+    private Long planId;
 
     @Column(name = "is_free_used", nullable = false)
     private Boolean isFreeUsed;
 
-    public User(Long id, Company company, Plan plan, String email, String password,
-                UserRole role, UserStatus status, LocalDateTime createdAt, Boolean isFreeUsed) {
-        this.id = id;
-        this.company = company;
-        this.plan = plan;
-        this.email = email;
-        this.password = password;
-        this.role = role;
-        this.status = status;
-        this.createdAt = createdAt;
-        this.isFreeUsed = isFreeUsed;
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
+    // =========================================================
+    // UserDetails 인터페이스 구현
+    // =========================================================
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return Collections.singletonList(new SimpleGrantedAuthority(this.role.name()));
+    }
+
+    @Override
+    public String getUsername() {
+        return this.email;
+    }
+
+    @Override
+    public String getPassword() {
+        return this.password;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return this.status == UserStatus.ACTIVE;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return this.status == UserStatus.ACTIVE;
     }
 }

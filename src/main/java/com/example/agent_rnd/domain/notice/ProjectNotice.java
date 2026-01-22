@@ -1,60 +1,58 @@
 package com.example.agent_rnd.domain.notice;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
+@Table(name = "project_notices") // 1. 테이블명 소문자+복수형 일치 시킴
 @Getter
-@NoArgsConstructor
-@Table(name = "project_notices") // [수정] SQL 스크립트의 소문자 테이블명 반영
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Builder
 public class ProjectNotice {
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "notice_id")
-    private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "notice_id") //  중요: DB가 snake_case이므로 명시 필수
+    private Long noticeId;
 
     @Column(name = "title", nullable = false)
     private String title;
 
     @Column(name = "link", columnDefinition = "TEXT")
-    private String url;
+    private String link;
 
-    @Column(name = "seq", length = 50)
+    @Column(name = "seq")
     private String seq;
 
     @Column(name = "author")
     private String author;
 
-    // [확정] CamelCase 유지
+    //  중요: DB가 CamelCase이므로, name을 명시하여 자동 변환 방지
     @Column(name = "excInsttNm")
-    private String agency;
+    private String excInsttNm;
 
-    @Lob
+    @Lob // longtext 대응
     @Column(name = "description", columnDefinition = "LONGTEXT")
     private String description;
 
-    // [확정] CamelCase 유지
-    @Column(name = "pubDate", length = 100)
+    //  DB 컬럼명 그대로 매핑
+    @Column(name = "pubDate")
     private String pubDate;
 
-    // [확정] CamelCase 유지
+    //  DB 컬럼명 그대로 매핑
     @Column(name = "reqstDt")
-    private String requestPeriod;
+    private String reqstDt;
 
-    // [확정] CamelCase 유지
     @Column(name = "trgetNm", columnDefinition = "TEXT")
-    private String targetName;
+    private String trgetNm;
 
-    // [확정] CamelCase 유지
     @Column(name = "printFlpthNm", columnDefinition = "TEXT")
-    private String filePath;
+    private String printFlpthNm;
 
-    // [확정] CamelCase 유지
     @Column(name = "printFileNm", columnDefinition = "TEXT")
-    private String fileName;
+    private String printFileNm;
 
-    // [확정] CamelCase 유지
     @Column(name = "hashTags", columnDefinition = "TEXT")
     private String hashTags;
 }

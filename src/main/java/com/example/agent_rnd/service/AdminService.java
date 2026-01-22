@@ -13,7 +13,6 @@ public class AdminService {
 
     private final CompanyRepository companyRepository;
     private final UserRepository userRepository;
-    private final DraftRepository draftRepository;
     private final ProposalRepository proposalRepository;
     private final CompanyTagRepository companyTagRepository;
 
@@ -25,7 +24,6 @@ public class AdminService {
         // 2) 자식 테이블부터 삭제
         if (!userIds.isEmpty()) {
             proposalRepository.deleteByUserIdIn(userIds);
-            draftRepository.deleteByUserIdIn(userIds);
         }
         companyTagRepository.deleteByCompanyId(companyId);
 

@@ -1,5 +1,5 @@
 package com.example.agent_rnd.domain.user;
 
 public enum UserStatus {
-    ACTIVE, WITHDRAWN
+    ACTIVE, INACTIVE, WITHDRAWN
 }

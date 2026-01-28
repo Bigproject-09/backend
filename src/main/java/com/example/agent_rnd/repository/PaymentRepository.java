@@ -10,4 +10,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     // 포트원 번호로 찾기
     Optional<Payment> findByImpUid(String impUid);
+    // 삭제 기능 추가
+    void deleteByUser_UserId(Long userId);
 }

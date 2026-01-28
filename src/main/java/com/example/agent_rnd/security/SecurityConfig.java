@@ -39,19 +39,17 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/",
                                 "/error",
                                 "/favicon.ico",
                                 "/api/login",
-                                "/api/auth/**",
-                                "/api/payments/**" // [추가] 결제 관련 API
+                                "/api/auth/**",          // company-signup, email, invite-signup 포함
+                                "/api/payments/**", // [추가] 결제 관련 API
+                                "/api/invites/validate"  // 토큰 확인
                         ).permitAll()
-                        // /api/logout 은 permitAll에 넣지 말기 (로그인된 토큰으로만 로그아웃)
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

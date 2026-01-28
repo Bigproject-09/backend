@@ -98,5 +98,8 @@ auth:
     code-ttl-seconds: 300
     verified-ttl-seconds: 3600
     max-attempts: 5
+  invite:
+    ttl-seconds: 86400
+    base-url: http://localhost:5173
 
 

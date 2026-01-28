@@ -1,14 +1,14 @@
 package com.example.agent_rnd.domain.user;
 
 import com.example.agent_rnd.domain.company.Company;
-import com.example.agent_rnd.domain.payment.Payment; // ✅ [추가] 결제 내역 연결
+import com.example.agent_rnd.domain.enums.UserRole;
+import com.example.agent_rnd.domain.payment.Payment;
 import com.example.agent_rnd.domain.plan.Plan;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
-import com.example.agent_rnd.domain.enums.UserRole;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -33,7 +33,7 @@ public class User {
     @JoinColumn(name = "plan_id", nullable = false)
     private Plan plan;
 
-    @Column(name = "email", nullable = false, length = 255, unique = true)
+    @Column(name = "email", nullable = false, length = 100) // DB varchar(100)
     private String email;
 
     @Column(nullable = false, length = 255)
@@ -47,58 +47,41 @@ public class User {
     @Column(nullable = false)
     private UserRole role; // 0=MASTER, 1=ADMIN, 2=MEMBER
 
-    // 추가] 양방향 매핑: 유저가 결제한 내역들 (조회용)
-    // mappedBy = "user"는 Payment 클래스 안의 'private User user;' 필드명을 뜻함
+    // self join
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id") // nullable
+    private User parent;
+
+    @OneToMany(mappedBy = "parent")
+    private List<User> children = new ArrayList<>();
+
     @OneToMany(mappedBy = "user")
     private List<Payment> payments = new ArrayList<>();
 
-    public static User create(
-            Company company,
-            Plan plan,
-            String email,
-            String password,
-            UserRole role
-    ) {
+    // ===== factory =====
+    private static User base(Company company, Plan plan, String email, String password, UserRole role, User parent) {
         User u = new User();
         u.company = company;
         u.plan = plan;
         u.email = email;
         u.password = password;
         u.role = role;
+        u.parent = parent;
         return u;
     }
 
     public static User createMaster(Company company, Plan plan, String email, String password) {
-        User u = new User();
-        u.company = company;
-        u.plan = plan;
-        u.email = email;
-        u.password = password;
-        u.role = UserRole.MASTER;
-        return u;
+        return base(company, plan, email, password, UserRole.MASTER, null);
     }
 
-    public static User createAdmin(Company company, Plan plan, String email, String password) {
-        User u = new User();
-        u.company = company;
-        u.plan = plan;
-        u.email = email;
-        u.password = password;
-        u.role = UserRole.ADMIN;
-        return u;
+    public static User createAdmin(Company company, Plan plan, String email, String password, User masterParent) {
+        return base(company, plan, email, password, UserRole.ADMIN, masterParent);
     }
 
-    public static User createMember(Company company, Plan plan, String email, String password) {
-        User u = new User();
-        u.company = company;
-        u.plan = plan;
-        u.email = email;
-        u.password = password;
-        u.role = UserRole.MEMBER;
-        return u;
+    public static User createMember(Company company, Plan plan, String email, String password, User adminParent) {
+        return base(company, plan, email, password, UserRole.MEMBER, adminParent);
     }
 
-    // 요금제 변경 메서드 (PaymentService에서 호출함)
     public void upgradePlan(Plan newPlan) {
         this.plan = newPlan;
     }

@@ -8,16 +8,20 @@ import com.example.agent_rnd.dto.PaymentCallbackRequest;
 import com.example.agent_rnd.repository.PaymentRepository;
 import com.example.agent_rnd.repository.PlanRepository;
 import com.example.agent_rnd.repository.UserRepository;
+import com.google.gson.Gson;
 import com.siot.IamportRestClient.IamportClient;
-import com.siot.IamportRestClient.exception.IamportResponseException;
-import com.siot.IamportRestClient.response.IamportResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
-import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -25,7 +29,7 @@ import java.math.BigDecimal;
 @Transactional(readOnly = true)
 public class PaymentService {
 
-    private final IamportClient iamportClient; // ✅ 라이브러리가 토큰 발급 자동 처리
+    private final IamportClient iamportClient;
     private final PaymentRepository paymentRepository;
     private final PlanRepository planRepository;
     private final UserRepository userRepository;
@@ -35,25 +39,20 @@ public class PaymentService {
      */
     @Transactional
     public Long processPaymentDone(PaymentCallbackRequest request) {
+        log.info("📢 결제 검증 요청 시작: imp_uid={}, merchant_uid={}", request.getImp_uid(), request.getMerchant_uid());
+
         // 1. 프론트에서 결제 실패라고 왔으면 바로 실패 처리
         if (request.getSuccess() != null && !request.getSuccess()) {
             throw new IllegalArgumentException("결제가 실패했습니다: " + request.getError_msg());
         }
 
         // 2. 포트원 서버에서 진짜 결제 내역 조회 (검증)
+        // ⭐ 수정된 메서드 호출 (include_sandbox=true 적용됨)
         com.siot.IamportRestClient.response.Payment portonePayment = getPortonePayment(request.getImp_uid());
 
-        // 3. 결제 금액 검증 (DB의 Plan 가격 vs 실제 결제된 가격)
-        // 주문번호(merchant_uid)에서 planId와 userId를 파싱하거나, 세션에서 가져와야 함.
-        // 여기서는 간단히 주문번호 생성 규칙이 "plan:{planId}_user:{userId}_{timestamp}" 라고 가정하고 파싱하거나,
-        // 혹은 DB에 '결제대기(READY)' 상태로 미리 저장해둔 Payment를 찾아와서 비교하는 것이 정석입니다.
-
-        // ★ 더 간단한 방법: 여기서는 imp_uid로 조회된 'amount'가 우리가 파는 플랜 가격 중 하나인지 확인 (약식)
+        // 3. 결제 금액 검증
         BigDecimal paidAmount = portonePayment.getAmount();
 
-        // (실무에서는 주문번호로 DB의 '결제대기' 건을 찾아서 비교해야 가장 정확합니다.)
-        // 여기서는 예시로 "주문번호에 포함된 planId"를 파싱한다고 가정해볼게요.
-        // 예: "P001_U123_17000000" (Plan 1번, User 123번)
         Long userId = parseUserIdFromMerchantUid(request.getMerchant_uid());
         Integer planId = parsePlanIdFromMerchantUid(request.getMerchant_uid());
 
@@ -61,7 +60,6 @@ public class PaymentService {
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 요금제입니다."));
 
         if (plan.getPrice().compareTo(paidAmount) != 0) {
-            // 가격 위변조 발생 -> 결제 취소 로직(cancelPayment) 호출 필요
             throw new IllegalStateException("결제 금액 오류! (상품: " + plan.getPrice() + ", 결제: " + paidAmount + ")");
         }
 
@@ -81,33 +79,70 @@ public class PaymentService {
 
         paymentRepository.save(payment);
 
-        // 5. 유저 등급 UP (비즈니스 로직)
+        // 5. 유저 등급 UP
         user.upgradePlan(plan);
+        log.info("✅ 결제 처리 완료! User ID: {}, Amount: {}", userId, paidAmount);
 
         return payment.getId();
     }
 
-    // 포트원 API 호출 헬퍼
+    // =========================================================================
+    // ⭐ [핵심 수정] 라이브러리 버그(파라미터 누락)를 해결하기 위해 직접 API 호출
+    // =========================================================================
     private com.siot.IamportRestClient.response.Payment getPortonePayment(String impUid) {
         try {
-            IamportResponse<com.siot.IamportRestClient.response.Payment> response = iamportClient.paymentByImpUid(impUid);
-            if (response.getResponse() == null) {
-                throw new IllegalArgumentException("결제 정보를 찾을 수 없습니다.");
+            // 1. 액세스 토큰 발급 (로그인)
+            // 토큰 발급은 기존 라이브러리가 잘 하니까 그대로 씁니다.
+            String accessToken = iamportClient.getAuth().getResponse().getToken();
+
+            // 2. [중요] URL 뒤에 '?include_sandbox=true'를 수동으로 붙임!
+            // (이게 없어서 아까 404가 떴던 겁니다)
+            String url = "https://api.iamport.kr/payments/" + impUid + "?include_sandbox=true";
+
+            // 3. 헤더 설정 (Bearer 토큰)
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("Authorization", "Bearer " + accessToken);
+            headers.add("Content-Type", "application/json");
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            // 4. API 호출 (GET)
+            log.info("🚀 포트원 수동 조회 시도: {}", url);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+
+            // 5. 결과 파싱 (JSON -> Payment 객체)
+            Gson gson = new Gson();
+            // 포트원 응답 구조: { "code": 0, "message": null, "response": { ...결제정보... } }
+            Map<String, Object> result = gson.fromJson(response.getBody(), Map.class);
+
+            // "response" 알맹이만 쏙 빼냅니다.
+            Object responseData = result.get("response");
+
+            if (responseData == null) {
+                log.error("🚨 조회 결과 response가 null입니다. (진짜 없는 결제건)");
+                throw new IllegalArgumentException("결제 정보를 찾을 수 없습니다. (404)");
             }
-            return response.getResponse();
-        } catch (IamportResponseException | IOException e) {
-            throw new RuntimeException("포트원 API 통신 에러", e);
+
+            // Map -> JSON String -> Payment 객체 변환
+            String jsonStr = gson.toJson(responseData);
+            com.siot.IamportRestClient.response.Payment payment = gson.fromJson(jsonStr, com.siot.IamportRestClient.response.Payment.class);
+
+            log.info("✅ 수동 조회 성공! 상태: {}", payment.getStatus());
+            return payment;
+
+        } catch (Exception e) {
+            log.error("🚨 포트원 API 조회 실패: {}", e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("포트원 API 연동 에러", e);
         }
     }
 
-    // 파싱 헬퍼 (프론트엔드와 주문번호 규칙을 맞춰야 함)
-    // 예: "plan-1_user-5_time-1234567"
+    // 파싱 헬퍼
     private Long parseUserIdFromMerchantUid(String uid) {
         try {
             String[] parts = uid.split("_");
-            return Long.parseLong(parts[1].split("-")[1]); // user-5 -> 5
+            return Long.parseLong(parts[1].split("-")[1]);
         } catch (Exception e) {
-            // 파싱 실패 시 테스트용 하드코딩 (실제론 에러 내야 함)
             return 1L;
         }
     }
@@ -115,7 +150,7 @@ public class PaymentService {
     private Integer parsePlanIdFromMerchantUid(String uid) {
         try {
             String[] parts = uid.split("_");
-            return Integer.parseInt(parts[0].split("-")[1]); // plan-1 -> 1
+            return Integer.parseInt(parts[0].split("-")[1]);
         } catch (Exception e) {
             return 1;
         }

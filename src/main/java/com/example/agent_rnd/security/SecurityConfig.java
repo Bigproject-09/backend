@@ -48,7 +48,8 @@ public class SecurityConfig {
                                 "/error",
                                 "/favicon.ico",
                                 "/api/login",
-                                "/api/auth/**"
+                                "/api/auth/**",
+                                "/api/payments/**" // [추가] 결제 관련 API
                         ).permitAll()
                         // /api/logout 은 permitAll에 넣지 말기 (로그인된 토큰으로만 로그아웃)
                         .anyRequest().authenticated()

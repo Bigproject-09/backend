@@ -39,13 +39,17 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
+                        // 🔓 공용 접근 허용
                         .requestMatchers(
                                 "/",
                                 "/error",
                                 "/favicon.ico",
                                 "/api/login",
-                                "/api/auth/**"          // ★ 회원가입/이메일인증 포함
+                                "/api/auth/**",
+                                "/api/notices/**"   // ✅ 공고 목록/상세/다운로드 허용
                         ).permitAll()
+
+                        // 🔒 그 외는 JWT 필요
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

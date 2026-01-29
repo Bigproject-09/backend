@@ -1,6 +1,5 @@
 package com.example.agent_rnd.dto;
 
-import com.example.agent_rnd.domain.notice.NoticeAttachment;
 import com.example.agent_rnd.domain.notice.ProjectNotice;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -11,20 +10,16 @@ import java.util.List;
 @AllArgsConstructor
 public class NoticeDetailResponse {
 
-    private Long id;
+    private Long noticeId;
     private String title;
     private String link;
     private String description;
     private String reqstDt;
-
-    /**
-     * 사용자가 업로드한 첨부파일 목록 (NOTICE_ATTACHMENTS)
-     */
     private List<AttachmentItem> attachments;
 
     public static NoticeDetailResponse from(ProjectNotice n) {
         return new NoticeDetailResponse(
-                n.getId(),
+                n.getNoticeId(),   // 🔥 수정 포인트
                 n.getTitle(),
                 n.getLink(),
                 n.getDescription(),
@@ -42,9 +37,11 @@ public class NoticeDetailResponse {
         private String originName;
         private String parseStatus;
 
-        public static AttachmentItem from(NoticeAttachment a) {
+        public static AttachmentItem from(
+                com.example.agent_rnd.domain.notice.NoticeAttachment a
+        ) {
             return new AttachmentItem(
-                    a.getId(),
+                    a.getAttachmentId(),
                     a.getOriginName(),
                     a.getParseStatus().name()
             );

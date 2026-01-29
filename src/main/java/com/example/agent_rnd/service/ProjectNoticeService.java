@@ -36,7 +36,7 @@ public class ProjectNoticeService {
      */
     public NoticeDetailResponse getNoticeDetail(Long noticeId) {
         ProjectNotice notice = projectNoticeRepository
-                .findWithAttachmentsById(noticeId)
+                .findById(noticeId)
                 .orElseThrow(() -> new IllegalArgumentException("공고 없음"));
 
         return NoticeDetailResponse.from(notice);

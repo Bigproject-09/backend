@@ -11,14 +11,14 @@ public class NoticeListResponse {
     private Long noticeId;
     private String title;
     private String excInsttNm;
-    private String reqstDt;
+    private String pubDate;
 
     public static NoticeListResponse from(ProjectNotice n) {
         return new NoticeListResponse(
-                n.getId(),
+                n.getNoticeId(),   // 🔥 수정 포인트
                 n.getTitle(),
                 n.getExcInsttNm(),
-                n.getReqstDt()
+                n.getPubDate()
         );
     }
 }

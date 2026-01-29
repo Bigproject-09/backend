@@ -9,8 +9,11 @@ import java.util.Optional;
 public interface ProjectNoticeRepository extends JpaRepository<ProjectNotice, Long> {
 
     /**
-     * 공고 상세 조회용 (첨부파일까지 같이 로딩)
+     * 공고 상세 조회용
+     * - attachments를 함께 로딩
+     * - N+1 방지
      */
     @EntityGraph(attributePaths = "attachments")
-    Optional<ProjectNotice> findWithAttachmentsById(Long id);
+    Optional<ProjectNotice> findById(Long noticeId);
 }
+

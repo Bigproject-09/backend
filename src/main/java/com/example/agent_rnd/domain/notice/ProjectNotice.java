@@ -1,14 +1,11 @@
 package com.example.agent_rnd.domain.notice;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Entity
 @Table(
@@ -19,13 +16,13 @@ import java.util.List;
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
-@Builder
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder(access = AccessLevel.PRIVATE)
 public class ProjectNotice {
 
     @Id
     @Column(name = "notice_id")
-    private Long id; // 외부(FastAPI)에서 주입
+    private Long noticeId;
 
     @Column(name = "seq", nullable = false, length = 100)
     private String seq;
@@ -63,13 +60,63 @@ public class ProjectNotice {
     @Column(name = "hash_tags", nullable = false, length = 500)
     private String hashTags;
 
-    @OneToMany(mappedBy = "notice", fetch = FetchType.LAZY)
+    /**
+     * 사용자 업로드 첨부파일
+     */
+    @OneToMany(mappedBy = "notice", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @Builder.Default
     private List<NoticeAttachment> attachments = new ArrayList<>();
 
-    // 연관관계 편의 메서드
+    /* =========================
+       정적 팩토리 메서드
+       ========================= */
+    public static ProjectNotice of(
+            Long noticeId,
+            String seq,
+            String title,
+            String link,
+            String author,
+            String excInsttNm,
+            String description,
+            String pubDate,
+            String reqstDt,
+            String trgetNm,
+            String printFlpthNm,
+            String printFileNm,
+            String hashTags
+    ) {
+        return ProjectNotice.builder()
+                .noticeId(noticeId)
+                .seq(seq)
+                .title(title)
+                .link(link)
+                .author(author)
+                .excInsttNm(excInsttNm)
+                .description(description)
+                .pubDate(pubDate)
+                .reqstDt(reqstDt)
+                .trgetNm(trgetNm)
+                .printFlpthNm(printFlpthNm)
+                .printFileNm(printFileNm)
+                .hashTags(hashTags)
+                .build();
+    }
+
     public void addAttachment(NoticeAttachment attachment) {
         this.attachments.add(attachment);
         attachment.setNotice(this);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ProjectNotice)) return false;
+        ProjectNotice that = (ProjectNotice) o;
+        return noticeId != null && noticeId.equals(that.noticeId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(noticeId);
     }
 }

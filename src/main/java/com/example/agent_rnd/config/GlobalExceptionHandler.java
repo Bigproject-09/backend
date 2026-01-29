@@ -20,7 +20,6 @@ public class GlobalExceptionHandler {
         ));
     }
 
-    // 이메일/사업자번호 중복 같은 케이스를 409로 보내고 싶으면(선택)
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, Object>> handleConflict(IllegalStateException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
@@ -31,7 +30,17 @@ public class GlobalExceptionHandler {
         ));
     }
 
-    // 나머지는 진짜 서버에러로 500
+    // ✅ 매핑 없는 경우 404로 내려주기 (Boot 3에서 자주 뜸)
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNoResource(org.springframework.web.servlet.resource.NoResourceFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                "timestamp", Instant.now().toString(),
+                "status", 404,
+                "error", "Not Found",
+                "message", e.getMessage()
+        ));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleServerError(Exception e) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(

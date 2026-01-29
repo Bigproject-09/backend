@@ -40,4 +40,33 @@ public class JwtTokenProvider {
                         .getSubject()
         );
     }
+    // 토큰 유효성 검사(서명/형식/만료)
+    public boolean validateToken(String token) {
+        try {
+            Jwts.parserBuilder()
+                    .setSigningKey(secretKey.getBytes())
+                    .build()
+                    .parseClaimsJws(token);
+            return true;
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    // 만료시간
+    public Date getExpiration(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(secretKey.getBytes())
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getExpiration();
+    }
+
+    // 남은 TTL(ms)
+    public long getRemainingMillis(String token) {
+        long now = System.currentTimeMillis();
+        long exp = getExpiration(token).getTime();
+        return Math.max(0, exp - now);
+    }
 }

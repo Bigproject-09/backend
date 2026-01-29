@@ -7,7 +7,10 @@ spring:
 
   jpa:
     hibernate:
+      # DB와 엔티티 구조가 일치하는지 검사만 수행
       ddl-auto: validate
+
+      # [중요] 자바 필드명 대소문자 그대로 DB 컬럼명을 찾게 하는 설정
       naming:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
         implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
@@ -17,17 +20,26 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
 
+  # =========================
+  # [필수] 대용량 파일 업로드 설정 (추가됨)
+  # =========================
   servlet:
     multipart:
-      max-file-size: 1GB
-      max-request-size: 1GB
+      max-file-size: 1GB       # 파일 1개당 최대 1GB
+      max-request-size: 1GB    # 요청 전체 최대 1GB
 
+  # =========================
+  # Redis 설정 (들여쓰기 수정됨)
+  # =========================
   data:
     redis:
       host: localhost
       port: 6379
       timeout: 2s
 
+  # =========================
+  # 이메일 설정 (들여쓰기 수정됨)
+  # =========================
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
@@ -39,6 +51,14 @@ spring:
           auth: true
           starttls:
             enable: true
+
+# =========================
+# 포트원 결제 설정 (여기를 꼭 채워주기) 💳
+# =========================
+payment:
+  portone:
+    api-key: "4645827567647136"
+    api-secret: "9dPHuJGhnr5Es7k7U2IpHOUstmMSLkH1uroaeKuQciznMzMML18HFSqa8EfbkI9rIoAqoOaVeBpb4WmA"
 
 # =========================
 # FastAPI 연동 (추가)
@@ -53,9 +73,10 @@ jwt:
   secret: agent-rnd-jwt-secret-key-32bytes-minimum!!
 
 # =========================
-# 서버 설정
+# 서버 설정 (타임아웃 & 에러)
 # =========================
 server:
+  # 대용량 처리를 위한 타임아웃 (10분)
   tomcat:
     connection-timeout: 600000
     keep-alive-timeout: 600000
@@ -66,19 +87,22 @@ server:
     include-binding-errors: always
 
 # =========================
-# 외부 API
+# 외부 API (사업자 진위확인)
 # =========================
 external:
   data-go:
     service-key: 17986d31ec5f9cf3a864ffc5d8cf4420667bfffb4fc4decc025b895f9d2ab2d0
     base-url: https://api.odcloud.kr/api/nts-businessman/v1
-
 # =========================
-# 이메일 인증 정책
+# 이메일 인증(Redis) 정책
 # =========================
 auth:
   email:
     code-ttl-seconds: 300
     verified-ttl-seconds: 3600
     max-attempts: 5
+  invite:
+    ttl-seconds: 86400
+    base-url: http://localhost:5173
+
 

@@ -12,4 +12,5 @@ public interface NoticeAttachmentRepository extends JpaRepository<NoticeAttachme
      * (업로드 시간 기준 오름차순)
      */
     List<NoticeAttachment> findByNotice_IdOrderByCreatedAtAsc(Long noticeId);
+    void deleteByUser_UserId(Long userId);
 }

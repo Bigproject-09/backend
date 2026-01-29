@@ -2,18 +2,17 @@ package com.example.agent_rnd.service;
 
 import com.example.agent_rnd.dto.AuthDtos;
 import com.example.agent_rnd.domain.company.Company;
+import com.example.agent_rnd.domain.enums.UserRole;
 import com.example.agent_rnd.domain.plan.Plan;
 import com.example.agent_rnd.domain.user.User;
-import com.example.agent_rnd.repository.CompanyRepository;
-import com.example.agent_rnd.repository.CompanyTagRepository;
-import com.example.agent_rnd.repository.PlanRepository;
-import com.example.agent_rnd.repository.UserRepository;
+import com.example.agent_rnd.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -26,11 +25,17 @@ public class UserService {
     private final PlanRepository planRepository;
     private final BusinessVerifyClient businessVerifyClient;
     private final EmailAuthService emailAuthService;
-    
+
+    // 삭제에 필요한 repo
+    private final NoticeAttachmentRepository noticeAttachmentRepository;
+    private final ProposalRepository proposalRepository;
+    private final PaymentRepository paymentRepository;
+
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
+    // 회사 최초 가입 = MASTER 생성
     @Transactional
-    public SignupResult companySignupAndCreateAdmin(AuthDtos.CompanySignupRequest req) {
+    public SignupResult companySignupAndCreateMaster(AuthDtos.CompanySignupRequest req) {
 
         String bno = normalizeDigits(req.businessRegNo());
         String startDt = normalizeDigits(req.openDate());
@@ -72,36 +77,106 @@ public class UserService {
         companyRepository.save(company);
 
         String encoded = passwordEncoder.encode(req.password());
-        User admin = User.createAdmin(company, plan, req.email(), encoded);
-        userRepository.save(admin);
 
-        return new SignupResult(company.getCompanyId(), admin.getUserId());
+        // MASTER로 생성 (parent=null)
+        User master = User.createMaster(company, plan, req.email().trim().toLowerCase(), encoded);
+        userRepository.save(master);
+
+        return new SignupResult(company.getCompanyId(), master.getUserId());
     }
 
+    // 회사 삭제(테스트/관리용): 회사 전체 삭제 시 하위 데이터 정리 필요
     @Transactional
     public void deleteCompanySignup(Long companyId) {
-        // 1) 회사 존재 확인
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new IllegalArgumentException("회사가 없습니다."));
 
-        // 2) 회사 유저(1명) 찾기
-        User user = userRepository.findFirstByCompany_CompanyId(companyId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 회사의 사용자가 없습니다."));
+        // 회사 유저들 전부 삭제(자식 -> 부모 순서)
+        // 1) MEMBER 삭제
+        userRepository.findAll().stream()
+                .filter(u -> Objects.equals(u.getCompany().getCompanyId(), companyId) && u.getRole() == UserRole.MEMBER)
+                .forEach(u -> hardDeleteUser(u.getUserId()));
 
-        Long userId = user.getUserId();
+        // 2) ADMIN 삭제
+        userRepository.findAll().stream()
+                .filter(u -> Objects.equals(u.getCompany().getCompanyId(), companyId) && u.getRole() == UserRole.ADMIN)
+                .forEach(u -> hardDeleteUser(u.getUserId()));
 
-        // 3) (선택) user_id를 참조하는 테이블 먼저 삭제 필요할 수 있음
-        // 예: noticeAttachmentRepository.deleteByUser_UserId(userId);
-        // 예: proposalRepository.deleteByUserId(userId);  (지금 Proposal은 FK가 아니라 단순 컬럼이라 정책에 따라)
+        // 3) MASTER 삭제
+        userRepository.findAll().stream()
+                .filter(u -> Objects.equals(u.getCompany().getCompanyId(), companyId) && u.getRole() == UserRole.MASTER)
+                .forEach(u -> hardDeleteUser(u.getUserId()));
 
-        // 4) 회사 태그 매핑 삭제(회사 FK 때문에 회사 삭제 전 먼저)
+        // 태그 매핑 삭제
         companyTagRepository.deleteByCompany_CompanyId(companyId);
 
-        // 5) 유저 삭제(유저가 company FK를 들고 있으니 회사 삭제 전)
-        userRepository.deleteById(userId);
-
-        // 6) 회사 삭제
         companyRepository.delete(company);
+    }
+
+    // MASTER/ADMIN이 유저 삭제할 때 사용할 메서드(컨트롤러에서 호출하도록 확장 가능)
+    @Transactional
+    public void deleteUserByManager(Long managerUserId, Long targetUserId) {
+        User manager = userRepository.findById(managerUserId)
+                .orElseThrow(() -> new IllegalArgumentException("요청자 유저가 없습니다."));
+        User target = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new IllegalArgumentException("대상 유저가 없습니다."));
+
+        if (!Objects.equals(manager.getCompany().getCompanyId(), target.getCompany().getCompanyId())) {
+            throw new IllegalArgumentException("다른 회사 유저는 삭제할 수 없습니다.");
+        }
+        if (target.getRole() == UserRole.MASTER) {
+            throw new IllegalArgumentException("MASTER는 삭제할 수 없습니다.");
+        }
+
+        if (manager.getRole() == UserRole.MASTER) {
+            // MASTER는 같은 회사면 가능. 단, ADMIN 삭제 시 해당 ADMIN이 자기 라인인지도 체크 권장
+            if (target.getRole() == UserRole.ADMIN) {
+                if (target.getParent() == null || !Objects.equals(target.getParent().getUserId(), manager.getUserId())) {
+                    throw new IllegalArgumentException("이 MASTER 소속 ADMIN이 아닙니다.");
+                }
+            }
+            if (target.getRole() == UserRole.MEMBER) {
+                // MEMBER의 parent ADMIN이 이 MASTER 라인인지 확인
+                if (target.getParent() == null || target.getParent().getRole() != UserRole.ADMIN) {
+                    throw new IllegalArgumentException("MEMBER의 parent가 비정상입니다.");
+                }
+                User parentAdmin = target.getParent();
+                if (parentAdmin.getParent() == null || !Objects.equals(parentAdmin.getParent().getUserId(), manager.getUserId())) {
+                    throw new IllegalArgumentException("이 MASTER 라인의 MEMBER가 아닙니다.");
+                }
+            }
+        } else if (manager.getRole() == UserRole.ADMIN) {
+            // ADMIN은 자기 아래 MEMBER만
+            if (target.getRole() != UserRole.MEMBER) throw new IllegalArgumentException("ADMIN은 MEMBER만 삭제할 수 있습니다.");
+            if (target.getParent() == null || !Objects.equals(target.getParent().getUserId(), manager.getUserId())) {
+                throw new IllegalArgumentException("내 소속 MEMBER만 삭제할 수 있습니다.");
+            }
+        } else {
+            throw new IllegalArgumentException("삭제 권한이 없습니다.");
+        }
+
+        // ADMIN 삭제면 하위 MEMBER 먼저 삭제
+        if (target.getRole() == UserRole.ADMIN) {
+            userRepository.findByParent_UserId(target.getUserId())
+                    .forEach(child -> hardDeleteUser(child.getUserId()));
+        }
+
+        hardDeleteUser(target.getUserId());
+    }
+
+    // FK 걸린 것들 먼저 삭제 후 USERS 삭제
+    @Transactional
+    protected void hardDeleteUser(Long userId) {
+        // 자식 먼저(안전)
+        userRepository.findByParent_UserId(userId)
+                .forEach(child -> hardDeleteUser(child.getUserId()));
+
+        // FK 데이터 정리
+        noticeAttachmentRepository.deleteByUser_UserId(userId);
+        proposalRepository.deleteByUserId(userId);
+        paymentRepository.deleteByUser_UserId(userId);
+
+        userRepository.deleteById(userId);
     }
 
     private String normalizeDigits(String s) {

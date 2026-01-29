@@ -1,6 +1,7 @@
 package com.example.agent_rnd.security;
 
 import com.example.agent_rnd.repository.UserRepository;
+import com.example.agent_rnd.service.LogoutService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,13 +18,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
+    private final LogoutService logoutService;
 
     public JwtAuthenticationFilter(
             JwtTokenProvider jwtTokenProvider,
-            UserRepository userRepository
+            UserRepository userRepository,
+            LogoutService logoutService
     ) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.userRepository = userRepository;
+        this.logoutService = logoutService;
     }
 
     @Override
@@ -36,18 +40,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String bearer = request.getHeader("Authorization");
 
         if (bearer != null && bearer.startsWith("Bearer ")) {
-            String token = bearer.substring(7);
-            Long userId = jwtTokenProvider.getUserId(token);
+            String token = bearer.substring(7).trim();
 
-            userRepository.findById(userId).ifPresent(user -> {
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                user.getUserId(),
-                                null,
-                                List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
-                        );
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-            });
+            // 블랙리스트면 즉시 차단
+            if (logoutService.isBlacklisted(token)) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                return;
+            }
+
+            // 토큰 유효성 검증(만료/서명)
+            if (jwtTokenProvider.validateToken(token)) {
+                Long userId = jwtTokenProvider.getUserId(token);
+
+                userRepository.findById(userId).ifPresent(user -> {
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    user.getUserId(),
+                                    null,
+                                    List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
+                            );
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                });
+            }
         }
 
         filterChain.doFilter(request, response);

@@ -10,10 +10,17 @@ public interface ProjectNoticeRepository extends JpaRepository<ProjectNotice, Lo
 
     /**
      * 공고 상세 조회용
-     * - attachments를 함께 로딩
-     * - N+1 방지
+     * - 연관된 엔티티들을 함께 로딩 (N+1 방지)
+     * - noticeFiles: 공고 파일 목록
+     * - hashtags: 해시태그 목록
+     * - checklists: 체크리스트 목록
+     * - references: 참고자료 목록
      */
-    @EntityGraph(attributePaths = "attachments")
-    Optional<ProjectNotice> findById(Long noticeId);
+    @EntityGraph(attributePaths = {
+            "noticeFiles",
+            "hashtags",
+            "checklists",      // ✅ checklistItems → checklists
+            "references"
+    })
+    Optional<ProjectNotice> findWithDetailsByNoticeId(Long noticeId);  // ✅ ById → ByNoticeId
 }
-

@@ -9,6 +9,7 @@ import com.example.agent_rnd.repository.PaymentRepository;
 import com.example.agent_rnd.repository.PlanRepository;
 import com.example.agent_rnd.repository.UserRepository;
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;  // ✅ 추가
 import com.siot.IamportRestClient.IamportClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.lang.reflect.Type;  // ✅ 추가
 import java.util.Map;
 
 @Slf4j
@@ -47,7 +49,6 @@ public class PaymentService {
         }
 
         // 2. 포트원 서버에서 진짜 결제 내역 조회 (검증)
-        // ⭐ 수정된 메서드 호출 (include_sandbox=true 적용됨)
         com.siot.IamportRestClient.response.Payment portonePayment = getPortonePayment(request.getImp_uid());
 
         // 3. 결제 금액 검증
@@ -86,36 +87,26 @@ public class PaymentService {
         return payment.getId();
     }
 
-    // =========================================================================
-    // ⭐ [핵심 수정] 라이브러리 버그(파라미터 누락)를 해결하기 위해 직접 API 호출
-    // =========================================================================
     private com.siot.IamportRestClient.response.Payment getPortonePayment(String impUid) {
         try {
-            // 1. 액세스 토큰 발급 (로그인)
-            // 토큰 발급은 기존 라이브러리가 잘 하니까 그대로 씁니다.
             String accessToken = iamportClient.getAuth().getResponse().getToken();
-
-            // 2. [중요] URL 뒤에 '?include_sandbox=true'를 수동으로 붙임!
-            // (이게 없어서 아까 404가 떴던 겁니다)
             String url = "https://api.iamport.kr/payments/" + impUid + "?include_sandbox=true";
 
-            // 3. 헤더 설정 (Bearer 토큰)
             RestTemplate restTemplate = new RestTemplate();
             HttpHeaders headers = new HttpHeaders();
             headers.add("Authorization", "Bearer " + accessToken);
             headers.add("Content-Type", "application/json");
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
-            // 4. API 호출 (GET)
             log.info("🚀 포트원 수동 조회 시도: {}", url);
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
 
-            // 5. 결과 파싱 (JSON -> Payment 객체)
             Gson gson = new Gson();
-            // 포트원 응답 구조: { "code": 0, "message": null, "response": { ...결제정보... } }
-            Map<String, Object> result = gson.fromJson(response.getBody(), Map.class);
 
-            // "response" 알맹이만 쏙 빼냅니다.
+            // ✅ TypeToken 사용 (경고 제거)
+            Type mapType = new TypeToken<Map<String, Object>>(){}.getType();
+            Map<String, Object> result = gson.fromJson(response.getBody(), mapType);
+
             Object responseData = result.get("response");
 
             if (responseData == null) {
@@ -123,7 +114,6 @@ public class PaymentService {
                 throw new IllegalArgumentException("결제 정보를 찾을 수 없습니다. (404)");
             }
 
-            // Map -> JSON String -> Payment 객체 변환
             String jsonStr = gson.toJson(responseData);
             com.siot.IamportRestClient.response.Payment payment = gson.fromJson(jsonStr, com.siot.IamportRestClient.response.Payment.class);
 
@@ -137,7 +127,6 @@ public class PaymentService {
         }
     }
 
-    // 파싱 헬퍼
     private Long parseUserIdFromMerchantUid(String uid) {
         try {
             String[] parts = uid.split("_");

@@ -4,21 +4,38 @@ import com.example.agent_rnd.domain.notice.ProjectNotice;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.util.List;
+
 @Getter
 @AllArgsConstructor
 public class NoticeListResponse {
 
     private Long noticeId;
     private String title;
-    private String excInsttNm;
-    private String pubDate;
+    private String excInsttNm;     // 집행기관명
+    private String author;         // 작성기관
+    private String pubDate;        // 게시일
+    private String reqstDt;        // 신청기한
+    private String trgetNm;        // 대상
 
-    public static NoticeListResponse from(ProjectNotice n) {
+    // ✅ 추가 정보
+    private Integer fileCount;     // 첨부파일 개수
+    private List<String> hashtags; // 해시태그 (최대 3개 정도만)
+
+    public static NoticeListResponse from(ProjectNotice notice) {
         return new NoticeListResponse(
-                n.getNoticeId(),   // 🔥 수정 포인트
-                n.getTitle(),
-                n.getExcInsttNm(),
-                n.getPubDate()
+                notice.getNoticeId(),
+                notice.getTitle(),
+                notice.getExcInsttNm(),
+                notice.getAuthor(),
+                notice.getPubDate(),
+                notice.getReqstDt(),
+                notice.getTrgetNm(),
+                notice.getNoticeFiles().size(),
+                notice.getHashtags().stream()
+                        .limit(3)  // 목록에서는 최대 3개만 표시
+                        .map(h -> h.getTagName())
+                        .toList()
         );
     }
 }

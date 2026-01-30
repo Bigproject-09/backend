@@ -47,7 +47,7 @@ public class UserManagementController {
                 me.getPlan().getPlanName(),
                 me.getPlan().getPrice(),
                 me.getPlan().isDownloadable(),
-                me.getPlan().getPreviewPage(),
+                me.getPlan().getPlanType(),  // ✅ previewPage → planType
                 parentId,
                 parentEmail,
                 me.getCreatedAt()
@@ -88,7 +88,7 @@ public class UserManagementController {
                 v.getPlanName(),
                 v.getPlanPrice(),
                 v.getIsDownloadable(),
-                v.getPreviewPage(),
+                v.getPlanType(),  // ✅ previewPage → planType
                 v.getCreatedAt()
         )).toList();
 

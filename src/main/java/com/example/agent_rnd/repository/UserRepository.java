@@ -45,7 +45,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
         String getPlanName();
         BigDecimal getPlanPrice();
         boolean getIsDownloadable();
-        Integer getPreviewPage();
+        String getPlanType();  // ✅ Integer getPreviewPage() → String getPlanType()
 
         LocalDateTime getCreatedAt();
     }
@@ -71,7 +71,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
             u.plan.planName as planName,
             u.plan.price as planPrice,
             u.plan.isDownloadable as isDownloadable,
-            u.plan.previewPage as previewPage,
+            u.plan.planType as planType,
 
             u.createdAt as createdAt
         from User u

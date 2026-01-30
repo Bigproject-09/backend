@@ -9,7 +9,7 @@ import java.util.Objects;
 
 @Entity
 @Table(
-        name = "PROJECT_NOTICES",
+        name = "project_notices",
         uniqueConstraints = {
                 @UniqueConstraint(columnNames = "seq")
         }
@@ -21,6 +21,7 @@ import java.util.Objects;
 public class ProjectNotice {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "notice_id")
     private Long noticeId;
 
@@ -51,21 +52,33 @@ public class ProjectNotice {
     @Column(name = "trget_nm", nullable = false, length = 200)
     private String trgetNm;
 
-    @Column(name = "print_flpth_nm", nullable = false, length = 500)
-    private String printFlpthNm;
-
-    @Column(name = "print_file_nm", nullable = false, length = 200)
-    private String printFileNm;
-
-    @Column(name = "hash_tags", nullable = false, length = 500)
-    private String hashTags;
+    /**
+     * 공고 파일 목록 (notice_files 테이블과 관계)
+     */
+    @OneToMany(mappedBy = "projectNotice", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<NoticeFile> noticeFiles = new ArrayList<>();
 
     /**
-     * 사용자 업로드 첨부파일
+     * 해시태그 목록 (notice_hashtags 테이블과 관계)
      */
-    @OneToMany(mappedBy = "notice", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "projectNotice", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<NoticeAttachment> attachments = new ArrayList<>();
+    private List<NoticeHashtag> hashtags = new ArrayList<>();
+
+    /**
+     * 체크리스트 목록
+     */
+    @OneToMany(mappedBy = "projectNotice", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ChecklistItem> checklists = new ArrayList<>();
+
+    /**
+     * 참고자료 목록
+     */
+    @OneToMany(mappedBy = "projectNotice", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<NoticeReference> references = new ArrayList<>();
 
     /* =========================
        정적 팩토리 메서드
@@ -80,10 +93,7 @@ public class ProjectNotice {
             String description,
             String pubDate,
             String reqstDt,
-            String trgetNm,
-            String printFlpthNm,
-            String printFileNm,
-            String hashTags
+            String trgetNm
     ) {
         return ProjectNotice.builder()
                 .noticeId(noticeId)
@@ -96,15 +106,30 @@ public class ProjectNotice {
                 .pubDate(pubDate)
                 .reqstDt(reqstDt)
                 .trgetNm(trgetNm)
-                .printFlpthNm(printFlpthNm)
-                .printFileNm(printFileNm)
-                .hashTags(hashTags)
                 .build();
     }
 
-    public void addAttachment(NoticeAttachment attachment) {
-        this.attachments.add(attachment);
-        attachment.setNotice(this);
+    /* =========================
+       연관관계 편의 메서드
+       ========================= */
+    public void addNoticeFile(NoticeFile noticeFile) {
+        this.noticeFiles.add(noticeFile);
+        noticeFile.setProjectNotice(this);
+    }
+
+    public void addHashtag(NoticeHashtag hashtag) {
+        this.hashtags.add(hashtag);
+        hashtag.setProjectNotice(this);
+    }
+
+    public void addChecklistItem(ChecklistItem checklist) {
+        this.checklists.add(checklist);
+        checklist.setProjectNotice(this);
+    }
+
+    public void addReference(NoticeReference reference) {
+        this.references.add(reference);
+        reference.setProjectNotice(this);
     }
 
     @Override

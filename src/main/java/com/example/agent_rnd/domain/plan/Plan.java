@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 @Entity
 @Getter
 @NoArgsConstructor
-@Table(name = "PLANS")
+@Table(name = "plans")
 public class Plan {
 
     @Id
@@ -26,6 +26,7 @@ public class Plan {
     @Column(name = "is_downloadable", nullable = false)
     private boolean isDownloadable;
 
-    @Column(name = "preview_page")
-    private Integer previewPage;
+    // ✅ preview_page 삭제하고 plan_type 추가
+    @Column(name = "plan_type", length = 20)
+    private String planType;  // FREE, PAID 등
 }

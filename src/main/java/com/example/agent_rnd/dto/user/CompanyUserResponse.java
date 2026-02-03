@@ -15,12 +15,5 @@ public record CompanyUserResponse(
 
         Long parentId,
         String parentEmail,
-
-        Integer planId,
-        String planName,
-        BigDecimal planPrice,
-        boolean isDownloadable,
-        String planType,  // ✅ Integer previewPage → String planType
-
         LocalDateTime createdAt
 ) {}

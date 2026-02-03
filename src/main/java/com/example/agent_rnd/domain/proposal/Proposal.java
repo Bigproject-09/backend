@@ -1,50 +1,44 @@
 package com.example.agent_rnd.domain.proposal;
 
+import com.example.agent_rnd.domain.notice.ProjectNotice;
+import com.example.agent_rnd.domain.user.User;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "proposals")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@EntityListeners(AuditingEntityListener.class)
-@Table(name = "PROPOSALS")
+@AllArgsConstructor
+@Builder
 public class Proposal {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "proposal_id")
-    private Long id;
+    private Long proposalId;
 
-    // 타 도메인 연결
-    @Column(name = "notice_id", nullable = false)
-    private Long noticeId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "notice_id", nullable = false)
+    private ProjectNotice notice;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-    @Column(nullable = false)
+    @Column(name = "title", nullable = false, length = 255)
     private String title;
 
-    @Column(name = "file_name", nullable = false)
+    @Column(name = "file_name", nullable = false, length = 255)
     private String fileName;
 
     @Column(name = "parsed_json", nullable = false, columnDefinition = "json")
     private String parsedJson;
 
-    @CreatedDate
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-
-    @Builder
-    public Proposal(Long noticeId, Long userId, String title, String fileName, String parsedJson) {
-        this.noticeId = noticeId;
-        this.userId = userId;
-        this.title = title;
-        this.fileName = fileName;
-        this.parsedJson = parsedJson;
-    }
 }

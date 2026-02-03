@@ -99,4 +99,12 @@ public class EmailAuthService {
     private int parseInt(String s, int def) {
         try { return Integer.parseInt(s); } catch (Exception e) { return def; }
     }
+
+    public void clear(String email) {
+        email = normalize(email);
+        redis.delete(codeKey(email));
+        redis.delete(attemptKey(email));
+        redis.delete(verifiedKey(email));
+    }
+
 }

@@ -1,8 +1,12 @@
 package com.example.agent_rnd.service;
 
+import com.example.agent_rnd.domain.notice.ProjectNotice;
 import com.example.agent_rnd.domain.proposal.Proposal;
+import com.example.agent_rnd.domain.user.User;
 import com.example.agent_rnd.dto.ProposalRequest;
+import com.example.agent_rnd.repository.ProjectNoticeRepository;
 import com.example.agent_rnd.repository.ProposalRepository;
+import com.example.agent_rnd.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
@@ -24,33 +28,44 @@ import java.util.List;
 public class ProposalService {
 
     private final ProposalRepository proposalRepository;
+    private final ProjectNoticeRepository projectNoticeRepository;
+    private final UserRepository userRepository;
     private final RestTemplate restTemplate;
 
-    // 파이썬 서버 주소 (데이터 팀과 협의 필요)
-    private final String PYTHON_SERVER_URL = "http://localhost:5000/parse";
+    // 파이썬 서버 주소 (실서비스는 application.yml로 빼는게 맞음)
+    private static final String PYTHON_SERVER_URL = "http://localhost:5000/parse";
 
     @Transactional
     public Long processProposalFile(MultipartFile file, ProposalRequest request) {
 
-        // 1. 파일 확장자 검사 (DOCX, PDF만 허용)
+        // 1) 파일 확장자 검사 (DOCX, PDF만 허용)
         validateFileExtension(file);
 
-        // 2. 파이썬 서버로 파일 전송 -> JSON 결과 받기
+        // 2) 파이썬 서버로 파일 전송 -> JSON 결과 받기
         String parsedJson = sendFileToPythonServer(file);
 
-        // 3. 결과 DB 저장
+        // 3) FK 엔티티 조회 (notice_id / user_id)
+        ProjectNotice notice = projectNoticeRepository.findById(request.getNoticeId())
+                .orElseThrow(() -> new IllegalArgumentException("공고(notice_id)가 없습니다. id=" + request.getNoticeId()));
+
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("사용자(user_id)가 없습니다. id=" + request.getUserId()));
+
+        // 4) 결과 DB 저장 (Proposal은 notice/user 연관관계로 저장)
         Proposal proposal = Proposal.builder()
-                .noticeId(request.getNoticeId())
-                .userId(request.getUserId())
+                .notice(notice)
+                .user(user)
                 .title(request.getTitle())
                 .fileName(file.getOriginalFilename())
                 .parsedJson(parsedJson)
                 .build();
 
-        return proposalRepository.save(proposal).getId();
+        Proposal saved = proposalRepository.save(proposal);
+
+        // ✅ PK getter 이름은 엔티티에 맞춰야 함 (대부분 getProposalId())
+        return saved.getProposalId();
     }
 
-    // 확장자 유효성 검사 메서드
     private void validateFileExtension(MultipartFile file) {
         String filename = file.getOriginalFilename();
         if (!StringUtils.hasText(filename)) {
@@ -62,15 +77,12 @@ public class ProposalService {
             throw new IllegalArgumentException("파일 확장자가 없습니다.");
         }
 
-        // 허용할 확장자 목록
         List<String> allowedExtensions = Arrays.asList("pdf", "docx", "doc");
-
         if (!allowedExtensions.contains(extension.toLowerCase())) {
             throw new IllegalArgumentException("지원하지 않는 파일 형식입니다. (pdf, docx만 가능)");
         }
     }
 
-    // 파이썬 통신 메서드
     private String sendFileToPythonServer(MultipartFile file) {
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -97,7 +109,6 @@ public class ProposalService {
         } catch (IOException e) {
             throw new RuntimeException("파일 읽기 실패", e);
         } catch (Exception e) {
-            // 파이썬 서버가 없을 때 테스트를 위한 더미 데이터 (개발용)
             System.out.println("파이썬 서버 연결 실패. 더미 데이터를 저장합니다.");
             return "{\"summary\": \"파이썬 서버 연결 실패 - 테스트용 더미 JSON\", \"pages\": []}";
         }

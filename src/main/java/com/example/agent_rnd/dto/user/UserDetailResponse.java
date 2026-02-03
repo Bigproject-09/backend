@@ -8,15 +8,9 @@ public record UserDetailResponse(
         Long userId,
         String email,
         UserRole role,
-
         Long companyId,
         String companyName,
-
-        Integer planId,
-        String planName,
-
         Long parentId,
         String parentEmail,
-
         LocalDateTime createdAt
 ) {}

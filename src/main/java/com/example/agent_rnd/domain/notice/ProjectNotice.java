@@ -3,8 +3,8 @@ package com.example.agent_rnd.domain.notice;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.Objects;
 
 @Entity
@@ -57,28 +57,28 @@ public class ProjectNotice {
      */
     @OneToMany(mappedBy = "projectNotice", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<NoticeFile> noticeFiles = new ArrayList<>();
+    private Set<NoticeFile> noticeFiles = new HashSet<>();  // ✅ List → Set
 
     /**
      * 해시태그 목록 (notice_hashtags 테이블과 관계)
      */
     @OneToMany(mappedBy = "projectNotice", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<NoticeHashtag> hashtags = new ArrayList<>();
+    private Set<NoticeHashtag> hashtags = new HashSet<>();  // ✅ List → Set
 
     /**
      * 체크리스트 목록
      */
     @OneToMany(mappedBy = "projectNotice", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<ChecklistItem> checklists = new ArrayList<>();
+    private Set<ChecklistItem> checklists = new HashSet<>();  // ✅ List → Set
 
     /**
      * 참고자료 목록
      */
     @OneToMany(mappedBy = "projectNotice", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<NoticeReference> references = new ArrayList<>();
+    private Set<NoticeReference> references = new HashSet<>();  // ✅ List → Set
 
     /* =========================
        정적 팩토리 메서드

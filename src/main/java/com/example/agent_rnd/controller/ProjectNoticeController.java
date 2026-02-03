@@ -40,18 +40,29 @@ public class ProjectNoticeController {
     }
 
     /**
-     * 공고 상세 조회
+     * 기업마당 기술공고 수집 트리거
      */
-    @GetMapping("/{id}")
+    @PostMapping("/collect")
+    public ResponseEntity<?> collectNotices() {
+        System.out.println("✅ /collect 호출됨!");
+        String fastApiUrl = "http://localhost:8000/collect/notices";
+        return restTemplate.postForEntity(fastApiUrl, null, Object.class);
+    }
+
+    /**
+     * 공고 상세 조회
+     * ✅ 정규식 추가: 숫자만 받음
+     */
+    @GetMapping("/{id:[0-9]+}")
     public NoticeDetailResponse getNotice(@PathVariable("id") Long noticeId) {
         return projectNoticeService.getNoticeDetail(noticeId);
     }
 
     /**
-     * 공고 파일 다운로드 (notice_files)
-     * 기업마당 원본 첨부파일
+     * 공고 파일 다운로드
+     * ✅ 정규식 추가: 숫자만 받음
      */
-    @GetMapping("/{noticeId}/files/{fileId}/download")
+    @GetMapping("/{noticeId:[0-9]+}/files/{fileId:[0-9]+}/download")
     public ResponseEntity<InputStreamResource> downloadNoticeFile(
             @PathVariable("noticeId") Long noticeId,
             @PathVariable("fileId") Long fileId
@@ -61,11 +72,9 @@ public class ProjectNoticeController {
 
     /**
      * 사용자 첨부파일 업로드 및 파싱 요청
-     * 1. 파일 업로드 → notice_files 저장
-     * 2. notice_attachments 생성 (파싱 대기 상태)
-     * 3. FastAPI에 파싱 요청
+     * ✅ 정규식 추가: 숫자만 받음
      */
-    @PostMapping("/{id}/attachments")
+    @PostMapping("/{id:[0-9]+}/attachments")
     public ResponseEntity<Long> uploadAttachment(
             @PathVariable("id") Long noticeId,
             @RequestParam("file") MultipartFile file,
@@ -79,8 +88,9 @@ public class ProjectNoticeController {
 
     /**
      * 첨부파일 파싱 상태 조회
+     * ✅ 정규식 추가: 숫자만 받음
      */
-    @GetMapping("/attachments/{attachmentId}/status")
+    @GetMapping("/attachments/{attachmentId:[0-9]+}/status")
     public ResponseEntity<?> getParseStatus(
             @PathVariable("attachmentId") Long attachmentId
     ) {
@@ -95,19 +105,6 @@ public class ProjectNoticeController {
                 ));
     }
 
-    /**
-     * 기업마당 기술공고 수집 트리거
-     * (FastAPI 위임 + 결과만 반환)
-     */
-    @PostMapping("/collect")
-    public ResponseEntity<?> collectNotices() {
-        String fastApiUrl = "http://localhost:8000/collect/notices";
-        return restTemplate.postForEntity(fastApiUrl, null, Object.class);
-    }
-
-    /**
-     * 파싱 상태 응답 DTO (내부 클래스)
-     */
     @Getter
     @AllArgsConstructor
     private static class ParseStatusResponse {

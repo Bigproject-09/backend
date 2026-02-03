@@ -19,7 +19,7 @@ public class AuthController {
     // 회사(마스터) 회원가입
     @PostMapping("/company-signup")
     public AuthDtos.CompanySignupResponse companySignup(@RequestBody AuthDtos.CompanySignupRequest req) {
-        var r = userService.companySignupAndCreateMaster(req);
+        var r = userService.companySignupAndCreateAdmin(req);
         return new AuthDtos.CompanySignupResponse(r.companyId(), r.adminUserId());
     }
 

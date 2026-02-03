@@ -3,9 +3,5 @@ package com.example.agent_rnd.repository;
 import com.example.agent_rnd.domain.company.Company;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.Optional;
-
 public interface CompanyRepository extends JpaRepository<Company, Long> {
-    Optional<Company> findByBusinessRegNo(String businessRegNo);
-    boolean existsByBusinessRegNo(String businessRegNo);
 }

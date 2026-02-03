@@ -1,7 +1,6 @@
 package com.example.agent_rnd.domain.enums;
 
 public enum UserRole {
-    MASTER,
-    ADMIN,
-    MEMBER
+    ADMIN,  // 0
+    MEMBER  // 1
 }

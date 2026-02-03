@@ -7,7 +7,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -24,24 +23,36 @@ public class Company {
     @Column(name = "company_name", nullable = false, length = 100)
     private String companyName;
 
-    @Column(name = "ceoName", nullable = false, length = 50)
+    // DB 컬럼명이 ceoName (언더스코어 아님)
+    @Column(name = "ceoName", nullable = true, length = 50)
     private String ceoName;
 
-    @Column(name = "openDate", nullable = false)
-    private LocalDate openDate;
+    @Column(name = "address", nullable = true, length = 255)
+    private String address;
 
-    @Column(name = "business_reg_no", nullable = false, length = 20)
-    private String businessRegNo;
+    @Column(name = "industry", nullable = true, length = 100)
+    private String industry;
+
+    @Column(name = "employees", nullable = true)
+    private Long employees;
+
+    // json 컬럼들 (MySQL JSON) - String으로 저장/조회
+    @Column(name = "financial_summary", columnDefinition = "json", nullable = true)
+    private String financialSummary;
+
+    @Column(name = "history", columnDefinition = "json", nullable = true)
+    private String history;
+
+    @Column(name = "core_competency", columnDefinition = "json", nullable = true)
+    private String coreCompetency;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "contract_status", nullable = false, length = 20)
     private ContractStatus contractStatus;
 
-    // 가입일(계약 시작일)
     @Column(name = "start_date", nullable = false)
     private LocalDateTime startDate;
 
-    // 로그인 차단일 기준(계약 만료일)
     @Column(name = "end_date", nullable = false)
     private LocalDateTime endDate;
 
@@ -49,83 +60,70 @@ public class Company {
     @Column(name = "user_entity_type", nullable = false, length = 20)
     private UserEntityType userEntityType;
 
-    // ===== optional (사용자 입력) =====
-    @Column(name = "address", length = 255)
-    private String address;
-
-    @Column(name = "industry", length = 50)
-    private String industry;
-
-    @Column(name = "employees")
-    private Long employees;
-
-    @Column(name = "financial_summary", columnDefinition = "json")
-    private String financialSummary;
-
-    @Column(name = "history", columnDefinition = "json")
-    private String history;
-
-    @Column(name = "core_competency", columnDefinition = "json")
-    private String coreCompetency;
+    @Column(name = "allowed_domain", nullable = false, length = 50)
+    private String allowedDomain;
 
     private Company(
             String companyName,
             String ceoName,
-            LocalDate openDate,
-            String businessRegNo,
+            String address,
+            String industry,
+            Long employees,
+            String financialSummary,
+            String history,
+            String coreCompetency,
             ContractStatus contractStatus,
             LocalDateTime startDate,
             LocalDateTime endDate,
-            UserEntityType userEntityType
+            UserEntityType userEntityType,
+            String allowedDomain
     ) {
         this.companyName = companyName;
         this.ceoName = ceoName;
-        this.openDate = openDate;
-        this.businessRegNo = businessRegNo;
+        this.address = address;
+        this.industry = industry;
+        this.employees = employees;
+        this.financialSummary = financialSummary;
+        this.history = history;
+        this.coreCompetency = coreCompetency;
         this.contractStatus = contractStatus;
         this.startDate = startDate;
         this.endDate = endDate;
         this.userEntityType = userEntityType;
+        this.allowedDomain = allowedDomain;
     }
 
     public static Company create(
             String companyName,
             String ceoName,
-            LocalDate openDate,
-            String businessRegNo,
-            LocalDateTime startDate,
-            LocalDateTime endDate,
-            UserEntityType userEntityType
-    ) {
-        return new Company(
-                companyName,
-                ceoName,
-                openDate,
-                businessRegNo,
-                ContractStatus.PENDING,
-                startDate,
-                endDate,
-                userEntityType
-        );
-    }
-
-    public void updateUserEntityType(UserEntityType userEntityType) {
-        this.userEntityType = userEntityType;
-    }
-
-    public void updateProfile(
             String address,
             String industry,
             Long employees,
-            String financialSummaryJson,
-            String historyJson,
-            String coreCompetencyJson
+            String financialSummary,
+            String history,
+            String coreCompetency,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
+            UserEntityType userEntityType,
+            String allowedDomain
     ) {
-        this.address = address;
-        this.industry = industry;
-        this.employees = employees;
-        this.financialSummary = financialSummaryJson;
-        this.history = historyJson;
-        this.coreCompetency = coreCompetencyJson;
+        if (companyName == null || companyName.isBlank()) throw new IllegalArgumentException("companyName is required");
+        if (allowedDomain == null || allowedDomain.isBlank()) throw new IllegalArgumentException("allowedDomain is required");
+
+        return new Company(
+                companyName.trim(),
+                (ceoName == null || ceoName.isBlank()) ? null : ceoName.trim(),
+                (address == null || address.isBlank()) ? null : address.trim(),
+                (industry == null || industry.isBlank()) ? null : industry.trim(),
+                employees,
+                financialSummary,
+                history,
+                coreCompetency,
+                ContractStatus.PENDING, // DB 기본값과 맞춤(현재 덤프에서 PENDING 사용)
+                startDate,
+                endDate,
+                userEntityType,
+                allowedDomain.trim().toLowerCase()
+        );
     }
 }

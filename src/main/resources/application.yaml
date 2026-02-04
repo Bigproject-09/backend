@@ -1,7 +1,7 @@
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/agentrnd16?serverTimezone=Asia/Seoul
+    url: jdbc:mysql://localhost:3306/randi2?serverTimezone=Asia/Seoul
     username: root
     password: aivle
 
@@ -108,5 +108,5 @@ auth:
 
 bizinfo:
   api:
-    key: "key"
+    key: "O5T1ww"
     url: "https://www.bizinfo.go.kr/uss/rss/bizinfoApi.do"

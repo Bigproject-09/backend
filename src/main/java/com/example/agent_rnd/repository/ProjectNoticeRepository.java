@@ -16,6 +16,7 @@ public interface ProjectNoticeRepository extends JpaRepository<ProjectNotice, Lo
      * - checklists: 체크리스트 목록
      * - references: 참고자료 목록
      */
+    boolean existsBySeq(String seq);
     @EntityGraph(attributePaths = {
             "noticeFiles",
             "hashtags",

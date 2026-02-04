@@ -57,32 +57,36 @@ public class ProjectNotice {
      */
     @OneToMany(mappedBy = "projectNotice", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private Set<NoticeFile> noticeFiles = new HashSet<>();  // ✅ List → Set
+    private Set<NoticeFile> noticeFiles = new HashSet<>();
 
     /**
      * 해시태그 목록 (notice_hashtags 테이블과 관계)
      */
     @OneToMany(mappedBy = "projectNotice", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private Set<NoticeHashtag> hashtags = new HashSet<>();  // ✅ List → Set
+    private Set<NoticeHashtag> hashtags = new HashSet<>();
 
     /**
      * 체크리스트 목록
      */
     @OneToMany(mappedBy = "projectNotice", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private Set<ChecklistItem> checklists = new HashSet<>();  // ✅ List → Set
+    private Set<ChecklistItem> checklists = new HashSet<>();
 
     /**
      * 참고자료 목록
      */
     @OneToMany(mappedBy = "projectNotice", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private Set<NoticeReference> references = new HashSet<>();  // ✅ List → Set
+    private Set<NoticeReference> references = new HashSet<>();
 
     /* =========================
        정적 팩토리 메서드
        ========================= */
+
+    /**
+     * 기존 메서드 (ID 포함)
+     */
     public static ProjectNotice of(
             Long noticeId,
             String seq,
@@ -97,6 +101,33 @@ public class ProjectNotice {
     ) {
         return ProjectNotice.builder()
                 .noticeId(noticeId)
+                .seq(seq)
+                .title(title)
+                .link(link)
+                .author(author)
+                .excInsttNm(excInsttNm)
+                .description(description)
+                .pubDate(pubDate)
+                .reqstDt(reqstDt)
+                .trgetNm(trgetNm)
+                .build();
+    }
+
+    /**
+     * ✅ 새로 추가: API 수집용 (ID 없이 생성)
+     */
+    public static ProjectNotice ofSeq(
+            String seq,
+            String title,
+            String link,
+            String author,
+            String excInsttNm,
+            String description,
+            String pubDate,
+            String reqstDt,
+            String trgetNm
+    ) {
+        return ProjectNotice.builder()
                 .seq(seq)
                 .title(title)
                 .link(link)

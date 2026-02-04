@@ -20,7 +20,7 @@ public class NoticeListResponse {
 
     // ✅ 추가 정보
     private Integer fileCount;     // 첨부파일 개수
-    private List<String> hashtags; // 해시태그 (최대 3개 정도만)
+    private List<String> hashtags; // ✅ 해시태그 전체 표시
 
     public static NoticeListResponse from(ProjectNotice notice) {
         return new NoticeListResponse(
@@ -33,7 +33,7 @@ public class NoticeListResponse {
                 notice.getTrgetNm(),
                 notice.getNoticeFiles().size(),
                 notice.getHashtags().stream()
-                        .limit(3)  // 목록에서는 최대 3개만 표시
+                        // .limit(3)  ← ✅ 삭제!
                         .map(h -> h.getTagName())
                         .toList()
         );

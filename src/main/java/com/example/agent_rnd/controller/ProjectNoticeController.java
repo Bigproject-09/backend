@@ -4,6 +4,7 @@ import com.example.agent_rnd.domain.notice.NoticeAttachment;
 import com.example.agent_rnd.dto.NoticeDetailResponse;
 import com.example.agent_rnd.dto.NoticeListResponse;
 import com.example.agent_rnd.service.NoticeAttachmentService;
+import com.example.agent_rnd.service.NoticeCollectionService;  // ✅ 추가
 import com.example.agent_rnd.service.NoticeFileService;
 import com.example.agent_rnd.service.ProjectNoticeService;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,8 @@ import org.springframework.web.client.RestTemplate;
 import lombok.Getter;
 import lombok.AllArgsConstructor;
 
+import java.util.Map;  // ✅ 추가
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/notices")
@@ -26,6 +29,7 @@ public class ProjectNoticeController {
     private final ProjectNoticeService projectNoticeService;
     private final NoticeFileService noticeFileService;
     private final NoticeAttachmentService noticeAttachmentService;
+    private final NoticeCollectionService noticeCollectionService;  // ✅ 추가
     private final RestTemplate restTemplate;
 
     /**
@@ -40,13 +44,14 @@ public class ProjectNoticeController {
     }
 
     /**
-     * 기업마당 기술공고 수집 트리거
+     * 기업마당 기술공고 수집
+     * ✅ FastAPI 호출 제거 → Spring에서 직접 처리
      */
     @PostMapping("/collect")
-    public ResponseEntity<?> collectNotices() {
-        System.out.println("✅ /collect 호출됨!");
-        String fastApiUrl = "http://localhost:8000/collect/notices";
-        return restTemplate.postForEntity(fastApiUrl, null, Object.class);
+    public ResponseEntity<Map<String, Integer>> collectNotices() {
+        System.out.println("🔥 공고 수집 시작");
+        int count = noticeCollectionService.collectNotices();
+        return ResponseEntity.ok(Map.of("inserted", count));
     }
 
     /**

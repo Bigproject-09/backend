@@ -80,8 +80,8 @@ public class EmailAuthService {
         redis.opsForValue().set(verifiedKey(email), "1", Duration.ofSeconds(verifiedTtlSeconds));
 
         // 코드/시도횟수 삭제(선택)
-        redis.delete(codeKey(email));
-        redis.delete(attemptKey(email));
+//        redis.delete(codeKey(email));
+//        redis.delete(attemptKey(email));
 
         return true;
     }

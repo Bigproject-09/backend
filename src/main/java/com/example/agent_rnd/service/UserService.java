@@ -23,7 +23,7 @@ public class UserService {
     public AuthDtos.CompanySignupResult companySignupAndCreateAdmin(AuthDtos.CompanySignupRequest req) {
 
         // 1. 이메일 인증번호 확인 (Redis 검증)
-        if (!emailAuthService.verifyCode(req.email(), req.authCode())) {
+        if (!emailAuthService.isVerified(req.email())) {
             throw new IllegalArgumentException("이메일 인증번호가 일치하지 않거나 만료되었습니다.");
         }
 

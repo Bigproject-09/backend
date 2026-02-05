@@ -1,7 +1,7 @@
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/randi2?serverTimezone=Asia/Seoul
+    url: jdbc:mysql://localhost:3306/randi?serverTimezone=Asia/Seoul
     username: root
     password: aivle
 
@@ -43,22 +43,14 @@ spring:
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
+    username: aivle13579@gmail.com
+    password: kgtwqecpmcjggihg
     properties:
       mail:
         smtp:
           auth: true
           starttls:
             enable: true
-
-# =========================
-# 포트원 결제 설정 (여기를 꼭 채워주기) 💳
-# =========================
-payment:
-  portone:
-    api-key: "4645827567647136"
-    api-secret: "9dPHuJGhnr5Es7k7U2IpHOUstmMSLkH1uroaeKuQciznMzMML18HFSqa8EfbkI9rIoAqoOaVeBpb4WmA"
 
 # =========================
 # FastAPI 연동 (추가)

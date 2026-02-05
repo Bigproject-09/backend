@@ -4,6 +4,7 @@ import com.example.agent_rnd.domain.company.Company;
 import com.example.agent_rnd.domain.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder; // ★ 추가
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
@@ -31,7 +32,9 @@ public class User {
     @Column(nullable = false, length = 255)
     private String password;
 
-    // DB: tinyint (0=ADMIN, 1=MEMBER)
+    @Column(name = "name", length = 100)
+    private String name;
+
     @Enumerated(EnumType.ORDINAL)
     @Column(nullable = false)
     private UserRole role;
@@ -44,29 +47,32 @@ public class User {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    private User(Company company, String email, String password, UserRole role, User parent) {
+    // ★ @Builder 추가: UserService에서 유연하게 객체를 생성하기 위함
+    @Builder
+    public User(Company company, String email, String password, String name, UserRole role, User parent) {
         this.company = company;
         this.email = email;
         this.password = password;
+        this.name = name;
         this.role = role;
         this.parent = parent;
     }
 
+    // 기존 팩토리 메서드는 유지하되, 필요 시 Builder를 사용하세요.
     public static User createAdmin(Company company, String email, String encodedPassword, User parent) {
-        return new User(company, email, encodedPassword, UserRole.ADMIN, parent);
+        return User.builder()
+                .company(company)
+                .email(email)
+                .password(encodedPassword)
+                .role(UserRole.ADMIN)
+                .parent(parent)
+                .build();
     }
 
-    public static User createMember(Company company, String email, String encodedPassword, User parentAdmin) {
-        if (parentAdmin == null || parentAdmin.getRole() != UserRole.ADMIN) {
-            throw new IllegalArgumentException("MEMBER의 parent는 ADMIN이어야 합니다.");
-        }
-        return new User(company, email, encodedPassword, UserRole.MEMBER, parentAdmin);
-    }
     public void changePassword(String encodedPassword) {
         if (encodedPassword == null || encodedPassword.isBlank()) {
             throw new IllegalArgumentException("변경할 비밀번호가 비어있습니다.");
         }
         this.password = encodedPassword;
     }
-
 }

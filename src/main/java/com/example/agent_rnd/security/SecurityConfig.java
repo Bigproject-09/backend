@@ -2,6 +2,8 @@ package com.example.agent_rnd.security;
 
 import com.example.agent_rnd.repository.UserRepository;
 import com.example.agent_rnd.service.LogoutService;
+import com.example.agent_rnd.security.JwtAuthenticationFilter;
+import com.example.agent_rnd.security.JwtTokenProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -37,27 +39,29 @@ public class SecurityConfig {
 
         http
                 .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configure(http)) // CORS 설정 활성화
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // 🔓 공용 접근 허용
+                        // 1. 공용 API (로그인, 회원가입, 이메일 등) - 403 에러 방지
                         .requestMatchers(
                                 "/",
                                 "/error",
                                 "/favicon.ico",
+                                "/api/auth/**",       // ★ email, invite, company-signup 모두 포함
                                 "/api/login",
-                                "/api/auth/**",
-                                "/api/notices/**", // ✅ 공고 목록/상세/다운로드 허용
-                                "/api/auth/**",          // company-signup, email, invite-signup 포함
-                                "/api/payments/**", // [추가] 결제 관련 API
+                                "/api/check-email",   // (혹시 모를 레거시 경로)
+                                "/api/send-code",
                                 "/api/invites/validate",
-                                // ✅ 추가해야 하는 부분
-                                "/collect/**",
-                                "/parse/**"// 토큰 확인
+                                "/api/notices/**",    // 공고 조회 허용
+                                "/api/payments/webhook"
                         ).permitAll()
 
-                        // 🔒 그 외는 JWT 필요
+                        // 2. ★ 관리자 전용 API (일반 MEMBER 접근 불가)
+                        .requestMatchers("/api/admin/**", "/api/users/**").hasRole("ADMIN")
+
+                        // 3. 나머지는 인증 필요 (MEMBER, ADMIN 모두 접근 가능)
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

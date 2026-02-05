@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Map;
 
 public class AuthDtos {
+
+    // 회원가입 요청 (Request)
     public record CompanySignupRequest(
             String companyName,
             String businessRegNo,
@@ -15,13 +17,17 @@ public class AuthDtos {
             Integer planId,
 
             // RegistrationPage에서 추가로 보내는 값들(옵션)
-            String address,                 // 합쳐서 문자열 저장
+            String address,
             String industry,
             Long employees,
-            Map<String, Object> financialSummary, // {"assetAmount": 123, ...}
-            List<String> history,                  // ["연혁1", "연혁2"...]
-            List<String> coreCompetency            // ["기술1", "기술2"...]
+            Map<String, Object> financialSummary,
+            List<String> history,
+            List<String> coreCompetency
     ) {}
 
+    // ★ [추가] 서비스 내부 반환용 (UserService에서 사용 중인 그 친구!)
+    public record CompanySignupResult(Long companyId, Long userId) {}
+
+    // 응답용 (Controller -> Frontend)
     public record CompanySignupResponse(Long companyId, Long adminUserId) {}
 }

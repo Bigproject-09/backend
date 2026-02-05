@@ -1,33 +1,15 @@
 package com.example.agent_rnd.dto;
 
-import java.util.List;
-import java.util.Map;
-
 public class AuthDtos {
 
-    // 회원가입 요청 (Request)
+    // ★ 회원가입 요청 (최종_진짜_최종)
     public record CompanySignupRequest(
-            String companyName,
-            String businessRegNo,
-            String openDate,   // YYYYMMDD
-            String ceoName,
-            String email,
-            String password,
-            String passwordConfirm,
-            Integer planId,
-
-            // RegistrationPage에서 추가로 보내는 값들(옵션)
-            String address,
-            String industry,
-            Long employees,
-            Map<String, Object> financialSummary,
-            List<String> history,
-            List<String> coreCompetency
+            String email,           // 아이디
+            String password,        // 비밀번호
+            String passwordConfirm, // 비밀번호 확인
+            String authCode         // 이메일 인증번호
     ) {}
 
-    // ★ [추가] 서비스 내부 반환용 (UserService에서 사용 중인 그 친구!)
     public record CompanySignupResult(Long companyId, Long userId) {}
-
-    // 응답용 (Controller -> Frontend)
-    public record CompanySignupResponse(Long companyId, Long adminUserId) {}
+    public record CompanySignupResponse(Long companyId, Long userId) {}
 }

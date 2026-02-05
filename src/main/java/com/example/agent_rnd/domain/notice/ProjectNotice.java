@@ -53,40 +53,37 @@ public class ProjectNotice {
     private String trgetNm;
 
     /**
-     * 공고 파일 목록 (notice_files 테이블과 관계)
+     * FastAPI(모델링) 결과 원본 JSON
+     * - MySQL json 컬럼을 그대로 문자열로 매핑
      */
+    @Column(name = "notice_parsing_json", columnDefinition = "json")
+    private String noticeParsingJson;
+
+    @Column(name = "notice_sections_json", columnDefinition = "json")
+    private String noticeSectionsJson;
+
+    @Column(name = "analysis_json", columnDefinition = "json")
+    private String analysisJson;
+
+    @Column(name = "checklist_json", columnDefinition = "json")
+    private String checklistJson;
+
     @OneToMany(mappedBy = "projectNotice", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<NoticeFile> noticeFiles = new HashSet<>();
 
-    /**
-     * 해시태그 목록 (notice_hashtags 테이블과 관계)
-     */
     @OneToMany(mappedBy = "projectNotice", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<NoticeHashtag> hashtags = new HashSet<>();
 
-    /**
-     * 체크리스트 목록
-     */
     @OneToMany(mappedBy = "projectNotice", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<ChecklistItem> checklists = new HashSet<>();
 
-    /**
-     * 참고자료 목록
-     */
     @OneToMany(mappedBy = "projectNotice", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<NoticeReference> references = new HashSet<>();
 
-    /* =========================
-       정적 팩토리 메서드
-       ========================= */
-
-    /**
-     * 기존 메서드 (ID 포함)
-     */
     public static ProjectNotice of(
             Long noticeId,
             String seq,
@@ -113,9 +110,6 @@ public class ProjectNotice {
                 .build();
     }
 
-    /**
-     * ✅ 새로 추가: API 수집용 (ID 없이 생성)
-     */
     public static ProjectNotice ofSeq(
             String seq,
             String title,
@@ -140,9 +134,6 @@ public class ProjectNotice {
                 .build();
     }
 
-    /* =========================
-       연관관계 편의 메서드
-       ========================= */
     public void addNoticeFile(NoticeFile noticeFile) {
         this.noticeFiles.add(noticeFile);
         noticeFile.setProjectNotice(this);

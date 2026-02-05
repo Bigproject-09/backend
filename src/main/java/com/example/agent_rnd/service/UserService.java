@@ -18,10 +18,8 @@ public class UserService {
     private final CompanyRepository companyRepository;
     private final PasswordEncoder passwordEncoder;
 
-    // ★ 웹 회원가입: 무조건 일반 멤버(MEMBER)로 생성
     @Transactional
     public AuthDtos.CompanySignupResult companySignupAndCreateAdmin(AuthDtos.CompanySignupRequest req) {
-
         // 1. 회사 생성
         Company company = Company.create(
                 req.companyName(),
@@ -37,13 +35,12 @@ public class UserService {
         );
         companyRepository.save(company);
 
-        // 2. 유저 생성 (★ MEMBER 권한 부여)
+        // 2. 유저 생성
         User user = User.builder()
                 .email(req.email())
                 .password(passwordEncoder.encode(req.password()))
-                .name(req.ceoName())
                 .company(company)
-                .role(UserRole.MEMBER) // [핵심] 가입 시 멤버로 시작
+                .role(UserRole.MEMBER)
                 .build();
 
         userRepository.save(user);

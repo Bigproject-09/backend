@@ -26,7 +26,7 @@ public class FastApiClient {
                     .uri(fastApiBaseUrl + "/api/analyze/step1")
                     .bodyValue(Map.of(
                             "notice_id", noticeId,
-                            "company_id", companyId != null ? companyId : 4
+                            "company_id", companyId != null ? companyId : 1
                     ))
                     .retrieve()
                     .bodyToMono(Map.class)

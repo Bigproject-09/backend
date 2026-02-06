@@ -1,13 +1,12 @@
 package com.example.agent_rnd.dto.auth;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Getter
+@AllArgsConstructor
+@NoArgsConstructor
 public class LoginResponse {
-    private final String accessToken;
-
-    public LoginResponse(String accessToken) {
-        this.accessToken = accessToken;
-    }
-
-    public String getAccessToken() {
-        return accessToken;
-    }
+    private String accessToken;
 }

@@ -11,6 +11,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -32,32 +37,44 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
         JwtAuthenticationFilter jwtFilter =
                 new JwtAuthenticationFilter(jwtTokenProvider, userRepository, logoutService);
 
         http
                 .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
                 .authorizeHttpRequests(auth -> auth
-                        // 🔓 공용 접근 허용
+                        // 🔓 누구나 접근 가능
                         .requestMatchers(
                                 "/",
                                 "/error",
                                 "/favicon.ico",
-                                "/api/login",
                                 "/api/auth/**",
-                                "/api/check-email",        // ✅ 이메일 중복 확인 추가
-                                "/api/verify-email-code",  // ✅ 이메일 인증 코드 확인 추가
-                                "/api/notices/**",         // 공고 목록/상세/다운로드 허용
-                                "/api/payments/**",        // 결제 관련 API
-                                "/api/invites/validate",   // 초대 토큰 확인
-                                "/collect/**",             // 공고 수집
-                                "/parse/**"                // 파일 파싱
+                                "/api/login",
+                                "/api/check-email",
+                                "/api/send-code",
+                                "/api/verify-email-code",
+                                "/api/invites/validate",
+                                "/api/notices/**",
+                                "/api/payments/webhook",
+                                "/collect/**",
+                                "/parse/**"
                         ).permitAll()
 
-                        // 🔒 그 외는 JWT 필요
+                        // 🔐 로그인한 사용자 접근 가능
+                        .requestMatchers("/api/users/me").authenticated()
+
+                        // 🔒 관리자 전용
+                        .requestMatchers("/api/admin/**", "/api/users/**")
+                        .hasRole("ADMIN")
+
+                        // 🔒 나머지는 모두 인증 필요
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
@@ -68,5 +85,29 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        configuration.setAllowedOrigins(
+                List.of("http://localhost:3000", "http://127.0.0.1:3000")
+        );
+
+        configuration.setAllowedMethods(
+                List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")
+        );
+
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
+        source.registerCorsConfiguration("/**", configuration);
+
+        return source;
     }
 }

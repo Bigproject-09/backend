@@ -48,13 +48,13 @@ public class SecurityConfig {
                                 "/favicon.ico",
                                 "/api/login",
                                 "/api/auth/**",
-                                "/api/notices/**", // ✅ 공고 목록/상세/다운로드 허용
-                                "/api/auth/**",          // company-signup, email, invite-signup 포함
-                                "/api/payments/**", // [추가] 결제 관련 API
-                                "/api/invites/validate",
-                                // ✅ 추가해야 하는 부분
-                                "/collect/**",
-                                "/parse/**"// 토큰 확인
+                                "/api/check-email",        // ✅ 이메일 중복 확인 추가
+                                "/api/verify-email-code",  // ✅ 이메일 인증 코드 확인 추가
+                                "/api/notices/**",         // 공고 목록/상세/다운로드 허용
+                                "/api/payments/**",        // 결제 관련 API
+                                "/api/invites/validate",   // 초대 토큰 확인
+                                "/collect/**",             // 공고 수집
+                                "/parse/**"                // 파일 파싱
                         ).permitAll()
 
                         // 🔒 그 외는 JWT 필요

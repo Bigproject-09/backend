@@ -20,6 +20,7 @@ public class ProjectMember {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "member_id") // DB 컬럼명 명시
     private Long memberId;
 
     @ManyToOne(fetch = FetchType.LAZY)

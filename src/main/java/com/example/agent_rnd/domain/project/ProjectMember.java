@@ -1,6 +1,6 @@
 package com.example.agent_rnd.domain.project;
 
-import com.example.agent_rnd.domain.proposal.Proposal; // 패키지 확인
+import com.example.agent_rnd.domain.proposal.Proposal;
 import com.example.agent_rnd.domain.user.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -14,26 +14,27 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "project_members",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"proposal_id", "user_id"}))
+@Table(
+        name = "project_members",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"proposal_id", "user_id"})
+)
 public class ProjectMember {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "member_id") // DB 컬럼명 명시
+    @Column(name = "member_id")
     private Long memberId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "proposal_id", nullable = false)
     private Proposal proposal;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    // ★ 권한: "ADMIN" or "MEMBER"
     @Column(nullable = false, length = 20)
-    private String role;
+    private String role; // "ADMIN" / "MEMBER"
 
     @CreationTimestamp
     @Column(name = "joined_at", nullable = false, updatable = false)
@@ -46,7 +47,6 @@ public class ProjectMember {
         this.role = role;
     }
 
-    // ★ 편의 메서드: 관리자인지 확인
     public boolean isAdmin() {
         return "ADMIN".equals(this.role);
     }

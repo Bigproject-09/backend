@@ -4,6 +4,7 @@ import com.example.agent_rnd.repository.UserRepository;
 import com.example.agent_rnd.service.LogoutService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -61,11 +62,21 @@ public class SecurityConfig {
                                 "/api/send-code",
                                 "/api/verify-email-code",
                                 "/api/invites/validate",
-                                "/api/notices/**",
                                 "/api/payments/webhook",
                                 "/collect/**",
                                 "/parse/**"
                         ).permitAll()
+
+                        // ✅ 공고 조회는 공개 (리스트/상세 등 GET만)
+                        .requestMatchers(HttpMethod.GET, "/api/notices/**").permitAll()
+
+                        // ✅ Step2(유관 RFP 검색) : 로그인 필수
+                        .requestMatchers(HttpMethod.POST, "/api/notices/*/search-rfp").authenticated()
+
+                        // (선택) Step1/3/4도 로그인 필요로 하고 싶으면 아래처럼 추가
+                        .requestMatchers(HttpMethod.POST, "/api/notices/*/analyze").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/notices/*/generate-ppt").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/notices/*/generate-script").authenticated()
 
                         // 🔐 로그인한 사용자 접근 가능
                         .requestMatchers("/api/users/me").authenticated()
@@ -74,7 +85,6 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**", "/api/users/**")
                         .hasRole("ADMIN")
 
-                        // 🔒 나머지는 모두 인증 필요
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

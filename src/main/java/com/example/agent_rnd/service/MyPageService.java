@@ -17,7 +17,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class MyPageService {
+public class    MyPageService {
 
     // private final ProposalRepository proposalRepository; // 이제 이거 대신 아래 걸 씁니다.
     private final ProjectMemberRepository projectMemberRepository; // ★ 변경

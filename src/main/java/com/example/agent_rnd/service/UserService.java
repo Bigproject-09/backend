@@ -89,6 +89,11 @@ public class UserService {
         String historyJson = toJsonOrNull(req.history());
         String coreJson = toJsonOrNull(req.coreCompetency());
 
+        // business_report_sections (JSON)
+        // - 프론트에서 업로드/파싱 결과를 넘기면 여기로 저장
+        // - 없으면 null 저장
+        String businessReportSectionsJson = toJsonOrNull(req.businessReportSections());
+
         Company company = Company.create(
                 req.companyName(),
                 req.ceoName(),
@@ -98,6 +103,7 @@ public class UserService {
                 financialSummaryJson,
                 historyJson,
                 coreJson,
+                businessReportSectionsJson,
                 now,
                 end,
                 userEntityType,

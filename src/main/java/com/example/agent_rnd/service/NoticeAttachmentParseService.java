@@ -4,10 +4,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
 @RequiredArgsConstructor
@@ -18,19 +19,27 @@ public class NoticeAttachmentParseService {
     private static final String FASTAPI_PARSE_URL = "http://localhost:8000/parse";
 
     /**
-     * 첨부파일 파싱 요청
-     * - 상태 변경은 호출자(NoticeAttachmentService)가 담당
-     * - 여기서는 FastAPI 호출 + 결과 반환만 수행
+     * 기존 공고 첨부 파싱 (기존 동작 유지)
+     * - mode=notice로 고정 (FastAPI default가 notice라서 사실상 동일)
      */
     public String parse(MultipartFile file) throws Exception {
-        return callFastApi(file);
+        return callFastApi(file, "notice");
     }
 
-    /* =========================
-       FastAPI 호출
-       ========================= */
+    /**
+     * 추가: mode 지정 파싱
+     * - "sections" 등
+     */
+    public String parseWithMode(MultipartFile file, String mode) throws Exception {
+        return callFastApi(file, mode);
+    }
 
-    private String callFastApi(MultipartFile file) throws Exception {
+    private String callFastApi(MultipartFile file, String mode) throws Exception {
+
+        String url = UriComponentsBuilder
+                .fromHttpUrl(FASTAPI_PARSE_URL)
+                .queryParam("mode", mode)
+                .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
@@ -43,24 +52,16 @@ public class NoticeAttachmentParseService {
             }
         });
 
-        HttpEntity<MultiValueMap<String, Object>> request =
-                new HttpEntity<>(body, headers);
+        HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(body, headers);
 
-        ResponseEntity<String> response =
-                restTemplate.postForEntity(
-                        FASTAPI_PARSE_URL,
-                        request,
-                        String.class
-                );
+        ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
 
         if (!response.getStatusCode().is2xxSuccessful()) {
-            throw new IllegalStateException("FastAPI 파싱 실패");
+            throw new IllegalStateException("FastAPI 파싱 실패 (status=" + response.getStatusCode() + ")");
         }
-
         if (response.getBody() == null || response.getBody().isBlank()) {
             throw new IllegalStateException("FastAPI 파싱 응답이 비어있음");
         }
-
         return response.getBody();
     }
 }

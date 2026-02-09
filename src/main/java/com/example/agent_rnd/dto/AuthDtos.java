@@ -20,7 +20,8 @@ public class AuthDtos {
             Long employees,
             Map<String, Object> financialSummary, // {"assetAmount": 123, ...}
             List<String> history,                  // ["연혁1", "연혁2"...]
-            List<String> coreCompetency            // ["기술1", "기술2"...]
+            List<String> coreCompetency,            // ["기술1", "기술2"...]
+            List<Map<String, Object>> businessReportSections
     ) {}
 
     public record CompanySignupResponse(Long companyId, Long adminUserId) {}

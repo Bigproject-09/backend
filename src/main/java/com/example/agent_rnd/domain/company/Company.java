@@ -6,6 +6,8 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.LocalDateTime;
 
@@ -30,7 +32,7 @@ public class Company {
     @Column(name = "address", nullable = true, length = 255)
     private String address;
 
-    @Column(name = "industry", nullable = true, length = 100)
+    @Column(name = "industry", nullable = true, length = 50)
     private String industry;
 
     @Column(name = "employees", nullable = true)
@@ -63,6 +65,29 @@ public class Company {
     @Column(name = "allowed_domain", nullable = false, length = 50)
     private String allowedDomain;
 
+    @Column(name = "business_report_sections", columnDefinition = "json", nullable = true)
+    private String businessReportSections;
+
+    public void updateBusinessReportSections(String sectionsJson) {
+        if (sectionsJson == null || sectionsJson.isBlank()) {
+            this.businessReportSections = null;
+            return;
+        }
+
+        // (선택) 최소 검증: JSON + 배열인지 확인
+        try {
+            ObjectMapper om = new ObjectMapper();
+            JsonNode node = om.readTree(sectionsJson);
+            if (!node.isArray()) {
+                throw new IllegalArgumentException("business_report_sections must be JSON array");
+            }
+        } catch (Exception e) {
+            throw new IllegalArgumentException("business_report_sections JSON invalid: " + e.getMessage());
+        }
+
+        this.businessReportSections = sectionsJson;
+    }
+
     private Company(
             String companyName,
             String ceoName,
@@ -72,6 +97,7 @@ public class Company {
             String financialSummary,
             String history,
             String coreCompetency,
+            String businessReportSections,
             ContractStatus contractStatus,
             LocalDateTime startDate,
             LocalDateTime endDate,
@@ -86,6 +112,7 @@ public class Company {
         this.financialSummary = financialSummary;
         this.history = history;
         this.coreCompetency = coreCompetency;
+        this.businessReportSections = businessReportSections;
         this.contractStatus = contractStatus;
         this.startDate = startDate;
         this.endDate = endDate;
@@ -102,6 +129,7 @@ public class Company {
             String financialSummary,
             String history,
             String coreCompetency,
+            String businessReportSections,
             LocalDateTime startDate,
             LocalDateTime endDate,
             UserEntityType userEntityType,
@@ -119,6 +147,7 @@ public class Company {
                 financialSummary,
                 history,
                 coreCompetency,
+                businessReportSections,
                 ContractStatus.PENDING, // DB 기본값과 맞춤(현재 덤프에서 PENDING 사용)
                 startDate,
                 endDate,

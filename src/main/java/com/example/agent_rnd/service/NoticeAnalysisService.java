@@ -1,6 +1,7 @@
 package com.example.agent_rnd.service;
 
 import com.example.agent_rnd.client.FastApiClient;
+import com.example.agent_rnd.dto.NoticeAnalysisAggregatedResponse;
 import com.example.agent_rnd.domain.enums.ReferenceType;
 import com.example.agent_rnd.domain.notice.ChecklistItem;
 import com.example.agent_rnd.domain.notice.NoticeReference;
@@ -141,6 +142,17 @@ public class NoticeAnalysisService {
                 "noticeId", noticeId,
                 "fastapi", fastapi
         );
+    }
+
+    @Transactional(readOnly = true)
+    public NoticeAnalysisAggregatedResponse getAggregated(Long noticeId) {
+        ProjectNotice notice = projectNoticeRepository.findById(noticeId)
+                .orElseThrow(() -> new IllegalArgumentException("noticeId not found: " + noticeId));
+
+        Map<String, Object> rawAnalysis = parseJsonSafely(notice.getAnalysisJson());
+        Map<String, Object> rawChecklist = parseJsonSafely(notice.getChecklistJson());
+
+        return NoticeAnalysisAggregateMapper.from(rawAnalysis, rawChecklist);
     }
 
     @Transactional(readOnly = true)

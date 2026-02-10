@@ -1,5 +1,6 @@
 package com.example.agent_rnd.controller;
 
+import com.example.agent_rnd.dto.NoticeAnalysisAggregatedResponse;
 import com.example.agent_rnd.service.NoticeAnalysisService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -79,5 +80,15 @@ public class NoticeAnalysisController {
             @PathVariable("noticeId") Long noticeId
     ) {
         return ResponseEntity.ok(noticeAnalysisService.getStored(noticeId));
+    }
+
+    /**
+     * 프론트 전용: analysis_json + checklist_json 집계 응답
+     */
+    @GetMapping("/analysis-aggregated")
+    public ResponseEntity<NoticeAnalysisAggregatedResponse> getAggregated(
+            @PathVariable("noticeId") Long noticeId
+    ) {
+        return ResponseEntity.ok(noticeAnalysisService.getAggregated(noticeId));
     }
 }

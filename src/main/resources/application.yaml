@@ -1,9 +1,9 @@
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/randi2?serverTimezone=Asia/Seoul
+    url: jdbc:mysql://localhost:3306/randi_db?serverTimezone=Asia/Seoul
     username: root
-    password: aivle
+    password: rootpw
 
   jpa:
     hibernate:

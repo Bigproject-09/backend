@@ -76,9 +76,12 @@ public class NoticeAnalysisService {
             throw new IllegalStateException("파싱 결과에서 notice_text를 만들지 못했습니다.");
         }
 
-        // 3) ministryName (ProjectNotice에 실제 있는 필드만 사용)
-        String ministryName = Optional.ofNullable(notice.getExcInsttNm()).orElse("");
-        // 혹시 excInsttNm이 비는 경우가 많으면, DB 조회 쪽(get_notice_info_by_id)에서 author를 채우게 만들면 됨
+        // 3) ministryName: "소관부처"는 author(예: 해양수산부)를 우선 사용하고,
+        //    없으면 집행기관(excInsttNm)으로 fallback.
+        String ministryName = Optional.ofNullable(notice.getAuthor()).orElse("").trim();
+        if (ministryName.isBlank()) {
+            ministryName = Optional.ofNullable(notice.getExcInsttNm()).orElse("").trim();
+        }
 
         // 4) step2 v2
         Map<String, Object> fastapi = fastApiClient.searchSimilarRfpV2(noticeId, noticeText, ministryName);

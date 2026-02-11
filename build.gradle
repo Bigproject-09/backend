@@ -49,8 +49,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-mail'
 
 
-	// 💳 포트원(아임포트) 결제 라이브러리
-	implementation 'com.github.iamport:iamport-rest-client-java:0.2.23'
+	// env 환경변수 추가
+	implementation "me.paulschwarz:spring-dotenv:4.0.0"
 
 	// 🛠 Lombok
 	compileOnly 'org.projectlombok:lombok'

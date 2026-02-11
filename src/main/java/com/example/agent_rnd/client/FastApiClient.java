@@ -10,8 +10,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.util.UriUtils;
 import reactor.core.publisher.Mono;
 
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -23,7 +25,7 @@ public class FastApiClient {
     private final WebClient webClient = WebClient.builder().build();
 
     @Value("${fastapi.base-url}")
-    private String fastApiBaseUrl;  // 예: http://localhost:8000
+    private String fastApiBaseUrl;
 
     public Map<String, Object> analyzeNotice(Long noticeId, Long companyId) {
         Map<String, Object> body = new LinkedHashMap<>();
@@ -32,7 +34,6 @@ public class FastApiClient {
         return postJson("/api/analyze/step1", body);
     }
 
-    // ✅ Step2 v2 (notice_text + ministry_name)
     public Map<String, Object> searchSimilarRfpV2(Long noticeId, String noticeText, String ministryName) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("notice_id", noticeId);
@@ -41,52 +42,67 @@ public class FastApiClient {
         return postJson("/api/analyze/step2", body);
     }
 
-    public Map<String, Object> generatePpt(Long noticeId) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("notice_id", noticeId);
-        return postJson("/api/analyze/step3", body);
-    }
+    public Map<String, Object> generatePpt(Long noticeId, MultipartFile file, String bearerToken) {
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        addMultipartFile(builder, "file", file);
+        builder.part("notice_id", String.valueOf(noticeId));
 
-    public Map<String, Object> generateScript(Long noticeId, String bearerToken) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("notice_id", noticeId);
-
-        WebClient.RequestBodySpec spec = webClient.post()
-                .uri(fastApiBaseUrl + "/api/analyze/step4")
-                .contentType(MediaType.APPLICATION_JSON);
-
-        // Step4는 FastAPI 쪽이 token을 body로 받는 구조라면 header는 의미 없음.
-        // (너 main.py Step4Request는 token 필드 있음) -> 그때는 body에 token 넣어야 함.
-        // 일단 "지금 네 FastAPI(main.py)가 header 안 읽는 구조"면 아래 header는 제거하는 게 안전.
-        if (bearerToken != null && !bearerToken.isBlank()) {
-            spec = spec.header("Authorization", bearerToken);
+        String token = extractRawToken(bearerToken);
+        if (token != null) {
+            builder.part("token", token);
         }
 
-        return spec
-                .bodyValue(body)
-                .retrieve()
-                .onStatus(s -> s.isError(), resp ->
-                        resp.bodyToMono(String.class)
-                                .defaultIfEmpty("")
-                                .flatMap(msg -> Mono.error(new IllegalStateException(
-                                        "FastAPI step4 실패: HTTP " + resp.statusCode().value() + " / " + msg
-                                )))
-                )
-                .bodyToMono(Map.class)
-                .block();
+        return postMultipart("/api/analyze/step3", builder);
     }
 
-    // ✅ /parse (multipart)
+    public Map<String, Object> generateScript(Long noticeId, MultipartFile file, String bearerToken) {
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        addMultipartFile(builder, "file", file);
+        builder.part("notice_id", String.valueOf(noticeId));
+
+        String token = extractRawToken(bearerToken);
+        if (token != null) {
+            builder.part("token", token);
+        }
+
+        return postMultipart("/api/analyze/step4", builder);
+    }
+
+    public DownloadedFile downloadGeneratedPpt(String filename) {
+        String encodedFilename = UriUtils.encodePathSegment(filename, StandardCharsets.UTF_8);
+
+        try {
+            return webClient.get()
+                    .uri(fastApiBaseUrl + "/download/" + encodedFilename)
+                    .accept(MediaType.APPLICATION_OCTET_STREAM)
+                    .retrieve()
+                    .onStatus(s -> s.isError(), resp ->
+                            resp.bodyToMono(String.class)
+                                    .defaultIfEmpty("")
+                                    .flatMap(msg -> Mono.error(new IllegalStateException(
+                                            "FastAPI download failed: HTTP " + resp.statusCode().value() + " / " + msg
+                                    )))
+                    )
+                    .toEntity(byte[].class)
+                    .map(resp -> {
+                        byte[] body = resp.getBody() == null ? new byte[0] : resp.getBody();
+                        MediaType contentType = resp.getHeaders().getContentType();
+                        if (contentType == null) {
+                            contentType = MediaType.APPLICATION_OCTET_STREAM;
+                        }
+                        return new DownloadedFile(body, contentType);
+                    })
+                    .block();
+        } catch (Exception e) {
+            log.error("FastAPI generated PPT download failed", e);
+            throw new IllegalStateException("FastAPI generated PPT download failed: " + e.getMessage(), e);
+        }
+    }
+
     public Map<String, Object> parseFile(MultipartFile file) {
         try {
             MultipartBodyBuilder builder = new MultipartBodyBuilder();
-            builder.part("file", new ByteArrayResource(file.getBytes()) {
-                        @Override
-                        public String getFilename() {
-                            return file.getOriginalFilename() == null ? "upload.bin" : file.getOriginalFilename();
-                        }
-                    })
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM);
+            addMultipartFile(builder, "file", file);
 
             return webClient.post()
                     .uri(fastApiBaseUrl + "/parse")
@@ -97,18 +113,16 @@ public class FastApiClient {
                             resp.bodyToMono(String.class)
                                     .defaultIfEmpty("")
                                     .flatMap(msg -> Mono.error(new IllegalStateException(
-                                            "FastAPI /parse 실패: HTTP " + resp.statusCode().value() + " / " + msg
+                                            "FastAPI /parse failed: HTTP " + resp.statusCode().value() + " / " + msg
                                     )))
                     )
                     .bodyToMono(Map.class)
                     .block();
         } catch (Exception e) {
-            log.error("FastAPI /parse 호출 실패", e);
-            throw new IllegalStateException("FastAPI /parse 호출 실패: " + e.getMessage(), e);
+            log.error("FastAPI /parse call failed", e);
+            throw new IllegalStateException("FastAPI /parse call failed: " + e.getMessage(), e);
         }
     }
-
-    // ---------------- helper ----------------
 
     private Map<String, Object> postJson(String path, Map<String, Object> body) {
         try {
@@ -121,47 +135,65 @@ public class FastApiClient {
                             resp.bodyToMono(String.class)
                                     .defaultIfEmpty("")
                                     .flatMap(msg -> Mono.error(new IllegalStateException(
-                                            "FastAPI 호출 실패(" + path + "): HTTP " + resp.statusCode().value() + " / " + msg
+                                            "FastAPI call failed (" + path + "): HTTP " + resp.statusCode().value() + " / " + msg
                                     )))
                     )
                     .bodyToMono(Map.class)
                     .block();
         } catch (Exception e) {
-            log.error("FastAPI 호출 실패: {}", path, e);
-            throw new IllegalStateException("FastAPI 호출 실패(" + path + "): " + e.getMessage(), e);
+            log.error("FastAPI call failed: {}", path, e);
+            throw new IllegalStateException("FastAPI call failed (" + path + "): " + e.getMessage(), e);
         }
     }
-    private String clampText(String s, int maxLen) {
-        if (s == null) return "";
-        String t = s.trim();
-        if (t.length() <= maxLen) return t;
-        return t.substring(0, maxLen);
+
+    private Map<String, Object> postMultipart(String path, MultipartBodyBuilder builder) {
+        try {
+            return webClient.post()
+                    .uri(fastApiBaseUrl + path)
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(BodyInserters.fromMultipartData(builder.build()))
+                    .retrieve()
+                    .onStatus(s -> s.isError(), resp ->
+                            resp.bodyToMono(String.class)
+                                    .defaultIfEmpty("")
+                                    .flatMap(msg -> Mono.error(new IllegalStateException(
+                                            "FastAPI call failed (" + path + "): HTTP " + resp.statusCode().value() + " / " + msg
+                                    )))
+                    )
+                    .bodyToMono(Map.class)
+                    .block();
+        } catch (Exception e) {
+            log.error("FastAPI call failed: {}", path, e);
+            throw new IllegalStateException("FastAPI call failed (" + path + "): " + e.getMessage(), e);
+        }
     }
 
-    private String buildNoticeTextFromParseResult(Map<String, Object> parsed) {
-        if (parsed == null) return "";
-
-        Object ft = parsed.get("file_type");
-        String fileType = ft == null ? "" : String.valueOf(ft).toLowerCase();
-
-        if ("pdf".equals(fileType)) {
-            Object pagesObj = parsed.get("pages");
-            if (pagesObj instanceof java.util.List<?> pages) {
-                StringBuilder sb = new StringBuilder();
-                for (Object p : pages) {
-                    if (p == null) continue;
-                    sb.append(String.valueOf(p)).append("\n");
-                }
-                return sb.toString();
-            }
-            return "";
+    private void addMultipartFile(MultipartBodyBuilder builder, String partName, MultipartFile file) {
+        try {
+            builder.part(partName, new ByteArrayResource(file.getBytes()) {
+                        @Override
+                        public String getFilename() {
+                            return file.getOriginalFilename() == null ? "upload.bin" : file.getOriginalFilename();
+                        }
+                    })
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM);
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to build multipart payload: " + e.getMessage(), e);
         }
-
-        if ("docx".equals(fileType)) {
-            Object contentObj = parsed.get("content");
-            return contentObj == null ? "" : String.valueOf(contentObj);
-        }
-
-        return "";
     }
+
+    private String extractRawToken(String bearerToken) {
+        if (bearerToken == null || bearerToken.isBlank()) {
+            return null;
+        }
+
+        String token = bearerToken.trim();
+        if (token.startsWith("Bearer ")) {
+            token = token.substring("Bearer ".length()).trim();
+        }
+
+        return token.isBlank() ? null : token;
+    }
+
+    public record DownloadedFile(byte[] body, MediaType contentType) {}
 }

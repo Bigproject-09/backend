@@ -1,13 +1,14 @@
 package com.example.agent_rnd.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -15,7 +16,8 @@ public class NoticeAttachmentParseService {
 
     private final RestTemplate restTemplate;
 
-    private static final String FASTAPI_PARSE_URL = "http://localhost:8000/parse";
+    @Value("${fastapi.base-url}")
+    private String fastApiBaseUrl;
 
     /**
      * 첨부파일 파싱 요청
@@ -48,7 +50,7 @@ public class NoticeAttachmentParseService {
 
         ResponseEntity<String> response =
                 restTemplate.postForEntity(
-                        FASTAPI_PARSE_URL,
+                        fastApiBaseUrl + "/parse",
                         request,
                         String.class
                 );

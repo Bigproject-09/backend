@@ -35,3 +35,29 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# =========================
+# Secrets / Local configs (추가)
+# =========================
+.env
+*.env
+.env.*
+**/application-local.yml
+**/application-local.yaml
+**/application-dev.yml
+**/application-dev.yaml
+**/application-prod.yml
+**/application-prod.yaml
+**/application-secret.yml
+**/application-secret.yaml
+
+# (선택) 로그/덤프
+*.log
+logs/
+*.dump
+*.sql
+*.bak
+*.tmp
+*.swp
+.DS_Store
+Thumbs.db

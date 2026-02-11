@@ -16,6 +16,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 import java.util.*;
 
 @Service
@@ -306,5 +315,36 @@ public class NoticeAnalysisService {
         String t = text.trim();
         if (t.length() <= maxChars) return t;
         return t.substring(0, maxChars);
+    }
+
+    @Transactional(readOnly = true)
+    public ResponseEntity<Resource> downloadPptx(Long noticeId) {
+        // Step3에서 저장한 NoticeReference(FILE, "Generated PPT", pptPath) 가져오기
+        NoticeReference ref = noticeReferenceRepository
+                .findFirstByProjectNotice_NoticeIdAndTypeAndTitle(noticeId, ReferenceType.FILE, "Generated PPT")
+                .orElseThrow(() -> new IllegalStateException("PPT 파일 정보가 없습니다. Step3(PPT 생성)를 다시 실행하세요."));
+
+        String rawPath = ref.getUrl();
+        if (rawPath == null || rawPath.isBlank()) {
+            throw new IllegalStateException("PPT 파일 경로가 비어있습니다. Step3를 다시 실행하세요.");
+        }
+
+        // 윈도우/리눅스 경로 섞임 대비
+        Path path = Paths.get(rawPath);
+        FileSystemResource resource = new FileSystemResource(path);
+
+        if (!resource.exists() || !resource.isReadable()) {
+            throw new IllegalStateException("PPT 파일을 찾을 수 없습니다: " + rawPath);
+        }
+
+        String filename = resource.getFilename();
+        if (filename == null || filename.isBlank()) filename = "deck.pptx";
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                ))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .body(resource);
     }
 }

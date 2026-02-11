@@ -285,7 +285,15 @@ public final class NoticeAnalysisAggregateMapper {
             String reason = normalizeWhitespace(asNullableString(m.get("reason")));
             String companyInfoUsed = normalizeWhitespace(asNullableString(m.get("company_info_used")));
             String quoteFromAnnouncement = normalizeWhitespace(asNullableString(m.get("quote_from_announcement")));
-            String additionalAction = nullableTrimmedString(m.get("additional_action"));
+            String additionalAction = nullableTrimmedString(pickFirstNonBlank(
+                    asNullableString(m.get("additional_action")),
+                    asNullableString(m.get("additionalAction")),
+                    asNullableString(m.get("additional")),
+                    asNullableString(m.get("action")),
+                    asNullableString(m.get("action_required")),
+                    asNullableString(m.get("recommended_action")),
+                    asNullableString(m.get("follow_up_action"))
+            ));
 
             out.add(new NoticeAnalysisAggregatedResponse.EligibilityJudgment(
                     id,

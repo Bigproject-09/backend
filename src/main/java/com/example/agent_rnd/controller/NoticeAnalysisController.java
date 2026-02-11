@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.core.io.Resource;
 
 import java.util.Map;
 
@@ -115,4 +116,16 @@ public class NoticeAnalysisController {
     ) {
         return ResponseEntity.ok(noticeAnalysisService.getAggregated(noticeId));
     }
+
+    /**
+     * [Download] Step3 생성 PPTX 다운로드
+     */
+    @GetMapping("/pptx")
+    public ResponseEntity<Resource> downloadPptx(
+            @PathVariable("noticeId") Long noticeId
+    ) {
+        return noticeAnalysisService.downloadPptx(noticeId);
+    }
+
+
 }

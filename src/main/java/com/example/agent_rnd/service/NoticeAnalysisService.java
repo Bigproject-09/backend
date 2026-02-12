@@ -16,15 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
 import java.util.*;
 
 @Service
@@ -78,16 +69,15 @@ public class NoticeAnalysisService {
         // 1) parse
         Map<String, Object> parsed = fastApiClient.parseFile(file);
 
-        // 2) noticeText 만들기 (✅ 존재하는 메서드 사용)
+        // 2) noticeText 만들기
         String noticeText = buildNoticeTextFromParsed(parsed);
-        noticeText = clampTextLocal(noticeText, 20000); // ✅ 로컬 제한
+        noticeText = clampTextLocal(noticeText, 20000);
 
         if (noticeText.isBlank()) {
             throw new IllegalStateException("파싱 결과에서 notice_text를 만들지 못했습니다.");
         }
 
-        // 3) ministryName: "소관부처"는 author(예: 해양수산부)를 우선 사용하고,
-        //    없으면 집행기관(excInsttNm)으로 fallback.
+        // 3) ministryName
         String ministryName = Optional.ofNullable(notice.getAuthor()).orElse("").trim();
         if (ministryName.isBlank()) {
             ministryName = Optional.ofNullable(notice.getExcInsttNm()).orElse("").trim();
@@ -113,31 +103,35 @@ public class NoticeAnalysisService {
         );
     }
 
+    /**
+     * ✅ Step3: DB 저장 안 함.
+     * - FastAPI가 로컬 output에 저장한 pptx_path를 그대로 응답으로만 내려준다.
+     */
     public Map<String, Object> runStep3(Long noticeId, Long companyId) {
-        ProjectNotice notice = projectNoticeRepository.findById(noticeId)
+        projectNoticeRepository.findById(noticeId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 noticeId=" + noticeId));
 
         Map<String, Object> fastapi = fastApiClient.generatePpt(noticeId);
 
         Map<String, Object> data = asMap(fastapi.get("data"));
-        String pptPath = asString(data.get("ppt_path"));
-        Integer slidesCount = asInt(data.get("slides_count"));
 
-        removeReferencesByTitle(noticeId, "Generated PPT");
-        if (pptPath != null && !pptPath.isBlank()) {
-            NoticeReference ref = NoticeReference.of(
-                    notice,
-                    ReferenceType.FILE,
-                    "Generated PPT",
-                    pptPath
-            );
-            noticeReferenceRepository.save(ref);
-        }
+        String pptxPath = firstNonBlank(
+                asStringOrNull(data.get("pptx_path")),
+                asStringOrNull(data.get("final_ppt_path")),
+                asStringOrNull(data.get("ppt_path")) // 하위 호환
+        );
+
+        Integer slidesCount = asInt(firstNonNull(
+                data.get("slides_count"),
+                data.get("total_slides")
+        ));
+
+        // ✅ DB 저장 로직 제거 (NoticeReference FILE 저장 안 함)
 
         return Map.of(
                 "status", "success",
                 "noticeId", noticeId,
-                "pptPath", pptPath,
+                "pptxPath", pptxPath,
                 "slidesCount", slidesCount,
                 "fastapi", fastapi
         );
@@ -225,15 +219,6 @@ public class NoticeAnalysisService {
         }
     }
 
-    private void removeReferencesByTitle(Long noticeId, String title) {
-        List<NoticeReference> refs = noticeReferenceRepository.findByProjectNotice_NoticeId(noticeId);
-        for (NoticeReference r : refs) {
-            if (title.equals(r.getTitle())) {
-                noticeReferenceRepository.delete(r);
-            }
-        }
-    }
-
     private static Map<String, Object> asMap(Object o) {
         if (o instanceof Map<?, ?> m) {
             Map<String, Object> out = new LinkedHashMap<>();
@@ -245,13 +230,27 @@ public class NoticeAnalysisService {
         return new LinkedHashMap<>();
     }
 
-    private static String asString(Object o) {
-        return o == null ? "" : String.valueOf(o);
+    private static String asStringOrNull(Object o) {
+        if (o == null) return null;
+        String s = String.valueOf(o).trim();
+        return s.isBlank() ? null : s;
     }
 
     private static Integer asInt(Object o) {
         if (o == null) return null;
         try { return Integer.parseInt(String.valueOf(o)); } catch (Exception e) { return null; }
+    }
+
+    private static Object firstNonNull(Object... vals) {
+        if (vals == null) return null;
+        for (Object v : vals) if (v != null) return v;
+        return null;
+    }
+
+    private static String firstNonBlank(String... vals) {
+        if (vals == null) return null;
+        for (String v : vals) if (v != null && !v.isBlank()) return v;
+        return null;
     }
 
     private record Pair(String title, String url) {}
@@ -285,7 +284,6 @@ public class NoticeAnalysisService {
         return new ArrayList<>(uniq.values());
     }
 
-    // ✅ 여기서 "실제 파싱 결과 구조"를 최대한 안전하게 문자열로 만든다
     private String buildNoticeTextFromParsed(Map<String, Object> parsed) {
         String fileType = String.valueOf(parsed.getOrDefault("file_type", "")).toLowerCase(Locale.ROOT);
 
@@ -315,36 +313,5 @@ public class NoticeAnalysisService {
         String t = text.trim();
         if (t.length() <= maxChars) return t;
         return t.substring(0, maxChars);
-    }
-
-    @Transactional(readOnly = true)
-    public ResponseEntity<Resource> downloadPptx(Long noticeId) {
-        // Step3에서 저장한 NoticeReference(FILE, "Generated PPT", pptPath) 가져오기
-        NoticeReference ref = noticeReferenceRepository
-                .findFirstByProjectNotice_NoticeIdAndTypeAndTitle(noticeId, ReferenceType.FILE, "Generated PPT")
-                .orElseThrow(() -> new IllegalStateException("PPT 파일 정보가 없습니다. Step3(PPT 생성)를 다시 실행하세요."));
-
-        String rawPath = ref.getUrl();
-        if (rawPath == null || rawPath.isBlank()) {
-            throw new IllegalStateException("PPT 파일 경로가 비어있습니다. Step3를 다시 실행하세요.");
-        }
-
-        // 윈도우/리눅스 경로 섞임 대비
-        Path path = Paths.get(rawPath);
-        FileSystemResource resource = new FileSystemResource(path);
-
-        if (!resource.exists() || !resource.isReadable()) {
-            throw new IllegalStateException("PPT 파일을 찾을 수 없습니다: " + rawPath);
-        }
-
-        String filename = resource.getFilename();
-        if (filename == null || filename.isBlank()) filename = "deck.pptx";
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(
-                        "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-                ))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-                .body(resource);
     }
 }

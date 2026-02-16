@@ -1,0 +1,16 @@
+services:
+  chroma_law:
+    command: ["--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      IS_PERSISTENT: "TRUE"
+      PERSIST_DIRECTORY: /chroma/chroma
+    expose:
+      - "8000"
+
+  chroma_strategy:
+    command: ["--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      IS_PERSISTENT: "TRUE"
+      PERSIST_DIRECTORY: /chroma/chroma
+    expose:
+      - "8000"

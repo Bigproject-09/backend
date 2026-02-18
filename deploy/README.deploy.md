@@ -59,3 +59,17 @@ docker compose up -d fastapi spring nginx
 ## 8. Rollout notes
 - TLS is intentionally out of scope in this deployment.
 - Restart does not auto-restore DB dump. Restore is manual by design.
+
+## 9. Modeling output retention (recommended)
+To prevent disk pressure from generated PPT artifacts, run periodic cleanup.
+
+```bash
+sudo chmod +x /opt/randi/src/backend/deploy/cleanup_modeling_output.sh
+sudo /opt/randi/src/backend/deploy/cleanup_modeling_output.sh
+```
+
+Daily cron (03:30):
+
+```bash
+(crontab -l 2>/dev/null; echo "30 3 * * * /opt/randi/src/backend/deploy/cleanup_modeling_output.sh >> /var/log/randi-modeling-cleanup.log 2>&1") | crontab -
+```

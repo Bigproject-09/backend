@@ -40,6 +40,9 @@ public class UserManagementController {
         return ResponseEntity.ok(new UserMeResponse(
                 me.getUserId(),
                 me.getEmail(),
+                me.getName(),
+                me.getDepartment(),
+                me.getPosition(),
                 me.getRole(),
                 me.getCompany().getCompanyId(),
                 me.getCompany().getCompanyName(),

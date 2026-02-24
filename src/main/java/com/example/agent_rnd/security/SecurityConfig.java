@@ -103,6 +103,12 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(List.of(
+                "https://randiaivle.duckdns.org",
+                "http://randiaivle.duckdns.org",
+                "https://16.184.16.236",
+                "http://16.184.16.236",
+                "https://ec2-16-184-16-236.ap-northeast-2.compute.amazonaws.com",
+                "http://ec2-16-184-16-236.ap-northeast-2.compute.amazonaws.com",
                 "http://localhost:3000",
                 "http://localhost:5173",
                 "http://localhost:5174",
